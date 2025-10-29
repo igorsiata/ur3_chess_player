@@ -57,7 +57,9 @@ def launch_setup(context, *args, **kwargs):
     # General arguments
     description_package = LaunchConfiguration("description_package")
     description_file = LaunchConfiguration("description_file")
-    _publish_robot_description_semantic = LaunchConfiguration("publish_robot_description_semantic")
+    _publish_robot_description_semantic = LaunchConfiguration(
+        "publish_robot_description_semantic"
+    )
     moveit_config_package = LaunchConfiguration("moveit_config_package")
     moveit_joint_limits_file = LaunchConfiguration("moveit_joint_limits_file")
     moveit_config_file = LaunchConfiguration("moveit_config_file")
@@ -73,20 +75,37 @@ def launch_setup(context, *args, **kwargs):
         [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
     )
     kinematics_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "default_kinematics.yaml"]
+        [
+            FindPackageShare(description_package),
+            "config",
+            ur_type,
+            "default_kinematics.yaml",
+        ]
     )
     physical_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "physical_parameters.yaml"]
+        [
+            FindPackageShare(description_package),
+            "config",
+            ur_type,
+            "physical_parameters.yaml",
+        ]
     )
     visual_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "visual_parameters.yaml"]
+        [
+            FindPackageShare(description_package),
+            "config",
+            ur_type,
+            "visual_parameters.yaml",
+        ]
     )
 
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
-            PathJoinSubstitution([FindPackageShare(description_package), "urdf", description_file]),
+            PathJoinSubstitution(
+                [FindPackageShare(description_package), "urdf", description_file]
+            ),
             " ",
             "robot_ip:=xxx.yyy.zzz.www",
             " ",
@@ -151,7 +170,11 @@ def launch_setup(context, *args, **kwargs):
             " ",
         ]
     )
-    robot_description_semantic = {"robot_description_semantic": ParameterValue(robot_description_semantic_content, value_type=str)}
+    robot_description_semantic = {
+        "robot_description_semantic": ParameterValue(
+            robot_description_semantic_content, value_type=str
+        )
+    }
 
     publish_robot_description_semantic = {
         "publish_robot_description_semantic": _publish_robot_description_semantic
@@ -235,6 +258,7 @@ def launch_setup(context, *args, **kwargs):
             moveit_controllers,
             planning_scene_monitor_parameters,
             move_group_capabilities,
+            {"planning_pipelines": ["ompl"]},
             {"use_sim_time": use_sim_time},
             warehouse_ros_config,
         ],
@@ -265,10 +289,10 @@ def launch_setup(context, *args, **kwargs):
     )
 
     motion_planner_node = Node(
-        package='ur3_tcp',
+        package="ur3_tcp",
         executable=motion_planner,
         name=motion_planner,
-        output='screen',
+        output="screen",
         parameters=[
             robot_description,
             robot_description_semantic,
@@ -279,16 +303,17 @@ def launch_setup(context, *args, **kwargs):
             trajectory_execution,
             moveit_controllers,
             planning_scene_monitor_parameters,
+            {"planning_pipelines": ["ompl"]},
             {"use_sim_time": use_sim_time},
             warehouse_ros_config,
-        ]
+        ],
     )
 
     static_tf_pub = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='tool0_to_gripper_tcp_sphere_broadcaster',
-        arguments=['0', '0', '0.05', '0', '0', '0', 'tool0', 'gripper_tcp_sphere']
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="tool0_to_gripper_tcp_sphere_broadcaster",
+        arguments=["0", "0", "0.05", "0", "0", "0", "tool0", "gripper_tcp_sphere"],
     )
 
     # Servo node for realtime control
@@ -306,7 +331,13 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
     )
 
-    nodes_to_start = [move_group_node, rviz_node, servo_node, motion_planner_node, static_tf_pub]
+    nodes_to_start = [
+        move_group_node,
+        rviz_node,
+        servo_node,
+        motion_planner_node,
+        static_tf_pub,
+    ]
 
     return nodes_to_start
 
@@ -417,10 +448,14 @@ def generate_launch_description():
         )
     )
     declared_arguments.append(
-        DeclareLaunchArgument("launch_rviz", default_value="true", description="Launch RViz?")
+        DeclareLaunchArgument(
+            "launch_rviz", default_value="true", description="Launch RViz?"
+        )
     )
     declared_arguments.append(
-        DeclareLaunchArgument("launch_servo", default_value="false", description="Launch Servo?")
+        DeclareLaunchArgument(
+            "launch_servo", default_value="false", description="Launch Servo?"
+        )
     )
     declared_arguments.append(
         DeclareLaunchArgument(
@@ -430,4 +465,6 @@ def generate_launch_description():
         )
     )
 
-    return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])
+    return LaunchDescription(
+        declared_arguments + [OpaqueFunction(function=launch_setup)]
+    )

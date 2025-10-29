@@ -2,7 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Pose
-from ur3_tcp.srv import MoveWaypoint  # Replace with your package name
+from ur3_tcp.srv import MoveWaypoint, MoveNamedPose
 
 
 class ArmMoverClient(Node):

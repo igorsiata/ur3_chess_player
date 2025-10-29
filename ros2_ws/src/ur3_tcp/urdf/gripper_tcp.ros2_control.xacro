@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="gripper_tcp" params="prefix">
+        <ros2_control name="GripperHardwareInterface" type="system">
+            <hardware>
+                <plugin>mock_components/GenericSystem</plugin>
+            </hardware>
+        
+            <joint name="${prefix}_tcp_sphere">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+        </ros2_control>
+
+    </xacro:macro>
+</robot>

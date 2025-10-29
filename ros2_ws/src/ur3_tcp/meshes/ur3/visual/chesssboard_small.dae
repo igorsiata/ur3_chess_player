@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <asset>
+    <contributor>
+      <author>Blender User</author>
+      <authoring_tool>Blender 3.0.1</authoring_tool>
+    </contributor>
+    <created>2025-10-27T09:21:49</created>
+    <modified>2025-10-27T09:21:49</modified>
+    <unit name="meter" meter="1"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+  <library_cameras>
+    <camera id="Camera-camera" name="Camera">
+      <optics>
+        <technique_common>
+          <perspective>
+            <xfov sid="xfov">39.59775</xfov>
+            <aspect_ratio>1.777778</aspect_ratio>
+            <znear sid="znear">0.1</znear>
+            <zfar sid="zfar">100</zfar>
+          </perspective>
+        </technique_common>
+      </optics>
+      <extra>
+        <technique profile="blender">
+          <shiftx sid="shiftx" type="float">0</shiftx>
+          <shifty sid="shifty" type="float">0</shifty>
+          <dof_distance sid="dof_distance" type="float">10</dof_distance>
+        </technique>
+      </extra>
+    </camera>
+  </library_cameras>
+  <library_lights>
+    <light id="Light-light" name="Light">
+      <technique_common>
+        <point>
+          <color sid="color">1000 1000 1000</color>
+          <constant_attenuation>1</constant_attenuation>
+          <linear_attenuation>0</linear_attenuation>
+          <quadratic_attenuation>0.00111109</quadratic_attenuation>
+        </point>
+      </technique_common>
+      <extra>
+        <technique profile="blender">
+          <type sid="type" type="int">0</type>
+          <flag sid="flag" type="int">0</flag>
+          <mode sid="mode" type="int">1</mode>
+          <gamma sid="blender_gamma" type="float">1</gamma>
+          <red sid="red" type="float">1</red>
+          <green sid="green" type="float">1</green>
+          <blue sid="blue" type="float">1</blue>
+          <shadow_r sid="blender_shadow_r" type="float">0</shadow_r>
+          <shadow_g sid="blender_shadow_g" type="float">0</shadow_g>
+          <shadow_b sid="blender_shadow_b" type="float">0</shadow_b>
+          <energy sid="blender_energy" type="float">1000</energy>
+          <dist sid="blender_dist" type="float">29.99998</dist>
+          <spotsize sid="spotsize" type="float">75</spotsize>
+          <spotblend sid="spotblend" type="float">0.15</spotblend>
+          <att1 sid="att1" type="float">0</att1>
+          <att2 sid="att2" type="float">1</att2>
+          <falloff_type sid="falloff_type" type="int">2</falloff_type>
+          <clipsta sid="clipsta" type="float">0.04999995</clipsta>
+          <clipend sid="clipend" type="float">30.002</clipend>
+          <bias sid="bias" type="float">1</bias>
+          <soft sid="soft" type="float">3</soft>
+          <bufsize sid="bufsize" type="int">2880</bufsize>
+          <samp sid="samp" type="int">3</samp>
+          <buffers sid="buffers" type="int">1</buffers>
+          <area_shape sid="area_shape" type="int">1</area_shape>
+          <area_size sid="area_size" type="float">0.1</area_size>
+          <area_sizey sid="area_sizey" type="float">0.1</area_sizey>
+          <area_sizez sid="area_sizez" type="float">1</area_sizez>
+        </technique>
+      </extra>
+    </light>
+  </library_lights>
+  <library_effects>
+    <effect id="chessboard-effect">
+      <profile_COMMON>
+        <newparam sid="chessboard_png_001-surface">
+          <surface type="2D">
+            <init_from>chessboard_png_001</init_from>
+          </surface>
+        </newparam>
+        <newparam sid="chessboard_png_001-sampler">
+          <sampler2D>
+            <source>chessboard_png_001-surface</source>
+          </sampler2D>
+        </newparam>
+        <technique sid="common">
+          <lambert>
+            <emission>
+              <color sid="emission">0 0 0 1</color>
+            </emission>
+            <diffuse>
+              <texture texture="chessboard_png_001-sampler" texcoord="UVMap"/>
+            </diffuse>
+            <index_of_refraction>
+              <float sid="ior">1.45</float>
+            </index_of_refraction>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>
+    <effect id="checcobard2-effect">
+      <profile_COMMON>
+        <technique sid="common">
+          <lambert>
+            <emission>
+              <color sid="emission">0 0 0 1</color>
+            </emission>
+            <diffuse>
+              <color sid="diffuse">0.03310163 0.007164865 4.90582e-4 1</color>
+            </diffuse>
+            <index_of_refraction>
+              <float sid="ior">1.45</float>
+            </index_of_refraction>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>
+    <effect id="Material-effect">
+      <profile_COMMON>
+        <technique sid="common">
+          <lambert>
+            <emission>
+              <color sid="emission">0 0 0 1</color>
+            </emission>
+            <diffuse>
+              <color sid="diffuse">0.8 0.8 0.8 1</color>
+            </diffuse>
+            <index_of_refraction>
+              <float sid="ior">1.45</float>
+            </index_of_refraction>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_images>
+    <image id="chessboard_png_001" name="chessboard_png_001">
+      <init_from>chessboard.png</init_from>
+    </image>
+  </library_images>
+  <library_materials>
+    <material id="chessboard-material" name="chessboard">
+      <instance_effect url="#chessboard-effect"/>
+    </material>
+    <material id="checcobard2-material" name="checcobard2">
+      <instance_effect url="#checcobard2-effect"/>
+    </material>
+    <material id="Material-material" name="Material">
+      <instance_effect url="#Material-effect"/>
+    </material>
+  </library_materials>
+  <library_geometries>
+    <geometry id="Cube-mesh" name="Cube">
+      <mesh>
+        <source id="Cube-mesh-positions">
+          <float_array id="Cube-mesh-positions-array" count="78">1 1 1 1 1 -1 1 -1 1 1 -1 -1 -1 1 1 -1 1 -1 -1 -1 1 -1 -1 -1 -1 0 -1 0 1 -1 1 1 0 -1 -1 0 1 -1 0 -1 1 0 0 -1 1 1 0 1 0 -1 -1 -1 0 1 0 1 1 1 0 -1 0 1 0 1 0 0 0 0 -1 -1 0 0 0 -1 0 0 0 1</float_array>
+          <technique_common>
+            <accessor source="#Cube-mesh-positions-array" count="26" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="Cube-mesh-normals">
+          <float_array id="Cube-mesh-normals-array" count="18">0 0 1 0 -1 0 -1 0 0 0 0 -1 1 0 0 0 1 0</float_array>
+          <technique_common>
+            <accessor source="#Cube-mesh-normals-array" count="6" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="Cube-mesh-map-0">
+          <float_array id="Cube-mesh-map-0-array" count="288">-1.006564 0.4981545 -0.5055906 -0.003171622 -0.5054144 0.4979781 -0.004617094 -0.5044979 0.4963564 -1.005824 0.4965326 -0.5046741 -0.00355935 2.502401 0.4974141 2.001075 0.4975904 2.502225 0.998035 0.4974492 1.499009 -0.003876805 1.499185 0.4972729 -0.004264533 0.4978018 0.4967089 -0.003524243 0.4968852 0.4976255 -0.003911912 1.500101 0.4970615 0.9987753 0.4972378 1.499925 0.4972378 1.499925 0.9982113 0.9985989 0.9983876 1.499749 0.4974141 2.001075 0.9983876 1.499749 0.9985639 2.000899 -0.003735601 2.001251 0.4972378 1.499925 0.4974141 2.001075 0.4968852 0.4976255 0.9978588 -0.003700494 0.998035 0.4974492 0.4970615 0.9987753 0.998035 0.4974492 0.9982113 0.9985989 -0.004088222 0.9989516 0.4968852 0.4976255 0.4970615 0.9987753 1.499185 0.4972729 2.000158 -0.004053115 2.000335 0.4970967 1.499361 0.9984227 2.000335 0.4970967 2.000511 0.9982464 0.9982113 0.9985989 1.499185 0.4972729 1.499361 0.9984227 0.4975904 2.502225 0.9985639 2.000899 0.9987401 2.502048 0.4977666 3.003374 0.9987401 2.502048 0.9989164 3.003198 -0.0033831 3.003551 0.4975904 2.502225 0.4977666 3.003374 0.4965326 -0.5046741 0.9975062 -1.006 0.9976825 -0.5048505 0.4967089 -0.003524243 0.9976825 -0.5048505 0.9978588 -0.003700494 -0.004440844 -0.003347992 0.4965326 -0.5046741 0.4967089 -0.003524243 -0.5054144 0.4979781 -0.004440844 -0.003347992 -0.004264533 0.4978018 -0.5052382 0.9991279 -0.004264533 0.4978018 -0.004088222 0.9989516 -1.006388 0.9993042 -0.5054144 0.4979781 -0.5052382 0.9991279 -1.006564 0.4981545 -1.00674 -0.002995252 -0.5055906 -0.003171622 -0.004617094 -0.5044979 -0.004793345 -1.005648 0.4963564 -1.005824 -0.00355935 2.502401 -0.003735601 2.001251 0.4974141 2.001075 0.998035 0.4974492 0.9978588 -0.003700494 1.499009 -0.003876805 -0.004264533 0.4978018 -0.004440844 -0.003347992 0.4967089 -0.003524243 -0.003911912 1.500101 -0.004088222 0.9989516 0.4970615 0.9987753 0.4972378 1.499925 0.4970615 0.9987753 0.9982113 0.9985989 0.4974141 2.001075 0.4972378 1.499925 0.9983876 1.499749 -0.003735601 2.001251 -0.003911912 1.500101 0.4972378 1.499925 0.4968852 0.4976255 0.4967089 -0.003524243 0.9978588 -0.003700494 0.4970615 0.9987753 0.4968852 0.4976255 0.998035 0.4974492 -0.004088222 0.9989516 -0.004264533 0.4978018 0.4968852 0.4976255 1.499185 0.4972729 1.499009 -0.003876805 2.000158 -0.004053115 1.499361 0.9984227 1.499185 0.4972729 2.000335 0.4970967 0.9982113 0.9985989 0.998035 0.4974492 1.499185 0.4972729 0.4975904 2.502225 0.4974141 2.001075 0.9985639 2.000899 0.4977666 3.003374 0.4975904 2.502225 0.9987401 2.502048 -0.0033831 3.003551 -0.00355935 2.502401 0.4975904 2.502225 0.4965326 -0.5046741 0.4963564 -1.005824 0.9975062 -1.006 0.4967089 -0.003524243 0.4965326 -0.5046741 0.9976825 -0.5048505 -0.004440844 -0.003347992 -0.004617094 -0.5044979 0.4965326 -0.5046741 -0.5054144 0.4979781 -0.5055906 -0.003171622 -0.004440844 -0.003347992 -0.5052382 0.9991279 -0.5054144 0.4979781 -0.004264533 0.4978018 -1.006388 0.9993042 -1.006564 0.4981545 -0.5054144 0.4979781</float_array>
+          <technique_common>
+            <accessor source="#Cube-mesh-map-0-array" count="144" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="Cube-mesh-vertices">
+          <input semantic="POSITION" source="#Cube-mesh-positions"/>
+        </vertices>
+        <triangles material="chessboard-material" count="8">
+          <input semantic="VERTEX" source="#Cube-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#Cube-mesh-normals" offset="1"/>
+          <input semantic="TEXCOORD" source="#Cube-mesh-map-0" offset="2" set="0"/>
+          <p>17 0 0 14 0 1 25 0 2 25 0 63 2 0 64 15 0 65 18 0 66 15 0 67 0 0 68 4 0 69 25 0 70 18 0 71 17 0 72 6 0 73 14 0 74 25 0 135 14 0 136 2 0 137 18 0 138 25 0 139 15 0 140 4 0 141 17 0 142 25 0 143</p>
+        </triangles>
+        <triangles material="checcobard2-material" count="40">
+          <input semantic="VERTEX" source="#Cube-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#Cube-mesh-normals" offset="1"/>
+          <input semantic="TEXCOORD" source="#Cube-mesh-map-0" offset="2" set="0"/>
+          <p>14 1 3 11 1 4 24 1 5 17 2 6 13 2 7 23 2 8 19 3 9 16 3 10 22 3 11 15 4 12 12 4 13 21 4 14 18 5 15 10 5 16 20 5 17 20 5 18 1 5 19 9 5 20 13 5 21 9 5 22 5 5 23 4 5 24 20 5 25 13 5 26 21 4 27 3 4 28 19 4 29 10 4 30 19 4 31 1 4 32 0 4 33 21 4 34 10 4 35 22 3 36 7 3 37 8 3 38 9 3 39 8 3 40 5 3 41 1 3 42 22 3 43 9 3 44 23 2 45 5 2 46 8 2 47 11 2 48 8 2 49 7 2 50 6 2 51 23 2 52 11 2 53 24 1 54 7 1 55 16 1 56 12 1 57 16 1 58 3 1 59 2 1 60 24 1 61 12 1 62 14 1 75 6 1 76 11 1 77 17 2 78 4 2 79 13 2 80 19 3 81 3 3 82 16 3 83 15 4 84 2 4 85 12 4 86 18 5 87 0 5 88 10 5 89 20 5 90 10 5 91 1 5 92 13 5 93 20 5 94 9 5 95 4 5 96 18 5 97 20 5 98 21 4 99 12 4 100 3 4 101 10 4 102 21 4 103 19 4 104 0 4 105 15 4 106 21 4 107 22 3 108 16 3 109 7 3 110 9 3 111 22 3 112 8 3 113 1 3 114 19 3 115 22 3 116 23 2 117 13 2 118 5 2 119 11 2 120 23 2 121 8 2 122 6 2 123 17 2 124 23 2 125 24 1 126 11 1 127 7 1 128 12 1 129 24 1 130 16 1 131 2 1 132 14 1 133 24 1 134</p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="Camera" name="Camera" type="NODE">
+        <matrix sid="transform">0.6859207 -0.3240135 0.6515582 7.358891 0.7276763 0.3054208 -0.6141704 -6.925791 0 0.8953956 0.4452714 4.958309 0 0 0 1</matrix>
+        <instance_camera url="#Camera-camera"/>
+      </node>
+      <node id="Light" name="Light" type="NODE">
+        <matrix sid="transform">-0.2908646 -0.7711008 0.5663932 4.076245 0.9551712 -0.1998834 0.2183912 1.005454 -0.05518906 0.6045247 0.7946723 5.903862 0 0 0 1</matrix>
+        <instance_light url="#Light-light"/>
+      </node>
+      <node id="Cube" name="Cube" type="NODE">
+        <matrix sid="transform">0.175 0 0 0 0 0.175 0 0 0 0 0.012 0 0 0 0 1</matrix>
+        <instance_geometry url="#Cube-mesh" name="Cube">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="chessboard-material" target="#chessboard-material">
+                <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
+              </instance_material>
+              <instance_material symbol="checcobard2-material" target="#checcobard2-material">
+                <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
+              </instance_material>
+              <instance_material symbol="Material-material" target="#Material-material">
+                <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
+              </instance_material>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>

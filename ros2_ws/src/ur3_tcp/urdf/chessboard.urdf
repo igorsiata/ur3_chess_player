@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<xacro:group xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="chessboard_xyz" value="0 0.3 0.024"/>
+  <xacro:property name="chessboard_rpy" value="0 0 0"/>
+
+  <link name="chessboard_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="0.000015" ixy="0.0" ixz="0.0" iyy="0.000015" iyz="0.0" izz="0.0000108"/>
+    </inertial>
+
+    <collision name="collision">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.35 0.35 0.024"/>
+      </geometry>
+    </collision>
+
+    <visual name="visual1">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://ur3_tcp/meshes/ur3/visual/chesssboard_small.dae" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="chessboard_to_world" type="fixed">
+    <parent link="world"/>
+    <child link="chessboard_link"/>
+    <origin xyz="${chessboard_xyz}" rpy="${chessboard_rpy}"/>
+  </joint>
+</xacro:group>

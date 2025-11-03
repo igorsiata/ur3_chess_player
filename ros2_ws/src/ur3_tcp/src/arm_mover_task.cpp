@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "ur3_tcp/srv/move_waypoint.hpp"
+#include "ur3_tcp/srv/move_joints.hpp"
 #include "ur3_tcp/srv/move_named_pose.hpp"
 
 #include <rclcpp/rclcpp.hpp>

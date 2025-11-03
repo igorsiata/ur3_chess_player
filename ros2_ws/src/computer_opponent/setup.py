@@ -28,7 +28,9 @@ setup(
             'human_player = computer_opponent.human_player:main',
             'pose_listener_moveit2 = my_robot_control.pose_listener_moveit2:main',
             'simple_client = computer_opponent.simple_client:main',
-            'test_ik = computer_opponent.test_ik:main'
+            'test_ik = computer_opponent.test_ik:main',
+            'gripper_driver = computer_opponent.gripper_driver:main',
+            'test_client = computer_opponent.test_client:main',
         ],
     },
 )

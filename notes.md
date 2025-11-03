@@ -2,6 +2,10 @@
 ## Sterowanie robotem
 Użycie moveit task constructor
 Moveit odpowiada za planowanie trajektorii, dzięki task constructor można połączyć trajektorie np przesunięcie pionowo w góre z pójściem do pozycji. Problem w integracji własnego sterowania chwytakiem z tym systemem. Prędkość wykonywania może być wolna przy duży ograniczeniach i liczbie rozwiązań. Algorytmy wykorzystywane są iteracyjne więc mogą nie znaleźć optymalnego rozwiązania lub jakiegokolwiej nawet jeśli takie istnieje. Konieczne jest dobre dobranie parametrów tak aby osiągnąć kompromis pomiędzy prędkością a dokładnością.
+
+Próbowano zaimplementować kinematykę odwrotną jednak rezultaty nie były zadowalające więc użyto gotowego rozwiązania do planowania trajektorii.
+
+Pewnie trzeba opisać jak działa to planowanie trajektorii bo inaczej pszypał.
 ## Sterowanie chwytakiem
 Sterowanie po TCP/IP łączymy się z ESP32. Dzięki własnej bibliotece jest możliwość wysyłania komend do płytki sterującej serwami. Możliwość odczytywania pozycji, zadawania pozycji. Do realizacji sterowania z poziomu ROS2 stworzono service który otrzymuje komende otwórz/zamknij i wykonuje akcje. Po sukcesie zwraca komunikat. Sukces imformacja zwortna lub odzczytanie pozycji po jakimś czasie.
 ## Wysyłanie ruchów

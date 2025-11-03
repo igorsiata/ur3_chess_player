@@ -1,0 +1,6 @@
+string move_type
+string from_sqr
+string to_sqr
+---
+bool success
+string message

@@ -37,6 +37,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/MoveWaypoint.srv"
   "srv/MoveNamedPose.srv"
+  "srv/MakeMove.srv"
+  "srv/GripperCmd.srv"
   DEPENDENCIES geometry_msgs
 )
 

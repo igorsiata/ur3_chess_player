@@ -100,7 +100,7 @@ void ArmMoverTask::moveWaypoitCallback(
         return;
     }
 
-    if (!task_.plan(2))
+    if (!task_.plan(3))
     {
         RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
         std::ofstream log_file("/home/igorsiata/mtc_failure.txt");
@@ -141,6 +141,7 @@ void ArmMoverTask::moveWaypoitCallback(
     }
     is_home_position_ = false;
     response->success = true;
+    RCLCPP_INFO(get_logger(), "End waypoint callback");
     return;
 }
 
@@ -161,7 +162,7 @@ void ArmMoverTask::moveNamedPoseCallback(
         return;
     }
 
-    if (!task_.plan(5))
+    if (!task_.plan(3))
     {
         RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
         std::ofstream log_file("/home/igorsiata/mtc_failure.txt");
@@ -211,7 +212,7 @@ mtc::Task ArmMoverTask::createNamedPoseTask(const std::string &name)
     task.loadRobotModel(node_);
 
     const auto &arm_group_name = "ur_manipulator";
-    const auto &hand_frame = "gripper_tcp_sphere";
+    const auto &hand_frame = "tool0";
 
     task.setProperty("group", arm_group_name);
     task.setProperty("ik_frame", hand_frame);
@@ -247,21 +248,15 @@ mtc::Task ArmMoverTask::createNamedPoseTask(const std::string &name)
         stage->setDirection(vec);
         task.add(std::move(stage));
     }
-
-    { // Go to target pose
-        auto stage_move_to_place = std::make_unique<mtc::stages::Connect>(
-            "move to place",
-            mtc::stages::Connect::GroupPlannerVector{{arm_group_name, sampling_planner}});
-        stage_move_to_place->setTimeout(5.0);
-        stage_move_to_place->properties().configureInitFrom(mtc::Stage::PARENT);
-        task.add(std::move(stage_move_to_place));
-    }
     {
-        auto stage = std::make_unique<mtc::stages::MoveTo>(name, sampling_planner);
+        auto stage = std::make_unique<mtc::stages::MoveTo>("move_to_pose", sampling_planner);
+        stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
         stage->setGroup(arm_group_name);
         stage->setGoal(name);
         task.add(std::move(stage));
     }
+    if(name=="home" || name=="idle")
+        is_home_position_ = true;
     return task;
 }
 
@@ -343,7 +338,7 @@ mtc::Task ArmMoverTask::createWaypointTask(const geometry_msgs::msg::Pose &pose)
         // Compute IK
         auto wrapper =
             std::make_unique<mtc::stages::ComputeIK>("place pose IK", std::move(move_to));
-        wrapper->setMaxIKSolutions(5);
+        wrapper->setMaxIKSolutions(2);
         wrapper->setMinSolutionDistance(0.001);
         wrapper->setIKFrame(hand_frame);
         wrapper->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});

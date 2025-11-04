@@ -31,6 +31,7 @@ setup(
             'test_ik = computer_opponent.test_ik:main',
             'gripper_driver = computer_opponent.gripper_driver:main',
             'test_client = computer_opponent.test_client:main',
+            'move_proxy = computer_opponent.move_proxy:main',
         ],
     },
 )

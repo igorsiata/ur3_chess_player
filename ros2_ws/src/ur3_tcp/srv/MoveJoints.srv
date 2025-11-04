@@ -1,4 +1,4 @@
-float[] angles
+float32[6] angles
 ---
 bool success
 string message

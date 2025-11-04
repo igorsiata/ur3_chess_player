@@ -278,13 +278,16 @@ def launch_setup(context, *args, **kwargs):
         parameters=[
             robot_description,
             robot_description_semantic,
-            ompl_planning_pipeline_config,
+            publish_robot_description_semantic,
             robot_description_kinematics,
             robot_description_planning,
+            ompl_planning_pipeline_config,
+            trajectory_execution,
+            moveit_controllers,
+            planning_scene_monitor_parameters,
+            {"planning_pipelines": ["ompl"]},
+            {"use_sim_time": use_sim_time},
             warehouse_ros_config,
-            {
-                "use_sim_time": use_sim_time,
-            },
         ],
     )
 

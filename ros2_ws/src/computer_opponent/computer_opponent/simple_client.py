@@ -2,16 +2,20 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Pose
-from ur3_tcp.srv import MoveWaypoint, MoveNamedPose
+from ur3_tcp.srv import MoveWaypoint, MoveNamedPose, MakeMove
 
 
 class ArmMoverClient(Node):
     def __init__(self):
         super().__init__('arm_mover_client')
         self.cli = self.create_client(MoveWaypoint, 'move_waypoint')
+        self.cli_name = self.create_client(MoveNamedPose, 'move_named_pose')
+        self.cli_move = self.create_client(MakeMove, "make_move")
         while not self.cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Service not available, waiting...')
         self.req = MoveWaypoint.Request()
+        self.req_name = MoveNamedPose.Request()
+        self.req_move = MakeMove.Request()
 
     def square_to_pose(self, square: str,) -> Pose:
         chsb_mid = [0.0, 0.3]
@@ -44,8 +48,8 @@ class ArmMoverClient(Node):
         pose.orientation.w = 0.0
         return pose
 
-    def send_waypoints(self, waypoints):
-        squares = ["a1", "a8", "h1", "h8"]
+    def send_waypoints(self):
+        squares = ["a1", "a5", "a2", "a3"]
         for sqr in squares:
             self.get_logger().info(f'Sending square {sqr}')
         
@@ -58,39 +62,48 @@ class ArmMoverClient(Node):
                 self.get_logger().info(f'Waypoint executed successfully')
             else:
                 self.get_logger().error(f'Failed to execute waypoint : {response.message}')
-                    
+
+    def send_poses(self):
+        poses = ["idle", "out", "idle", "out",]
+        for pose in poses:
+            self.get_logger().info(f'Sending square {pose}')
+        
+            
+            self.req_name.name =  pose
+            future = self.cli_name.call_async(self.req_name)
+            rclpy.spin_until_future_complete(self, future)
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f'Waypoint executed successfully')
+            else:
+                self.get_logger().error(f'Failed to execute waypoint : {response.message}')
+
+    
+    def send_moves(self):
+        moves = ["e1g1"]
+        move_types = ["castle"]
+        for m, mt in zip(moves, move_types):
+            self.get_logger().info(f'Sending move: {mt}, {m}')
+        
+            
+            self.req_move.from_sqr =  m[:2]
+            self.req_move.to_sqr =  m[2:]
+            self.req_move.move_type =  mt
+            future = self.cli_move.call_async(self.req_move)
+            rclpy.spin_until_future_complete(self, future)
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f'Waypoint executed successfully')
+            else:
+                self.get_logger().error(f'Failed to execute waypoint : {response.message}')
+                            
 
 def main(args=None):
     rclpy.init(args=args)
     client = ArmMoverClient()
-
-    # Example: define some waypoints
-    waypoints = []
-
-    p1 = Pose()
-    p1.position.x = 0.3
-    p1.position.y = 0.0
-    p1.position.z = 0.5
-    p1.orientation.w = 1.0
-    waypoints.append(p1)
-
-    p2 = Pose()
-    p2.position.x = 0.4
-    p2.position.y = 0.1
-    p2.position.z = 0.5
-    p2.orientation.w = 1.0
-    waypoints.append(p2)
-
-    p3 = Pose()
-    p3.position.x = 0.5
-    p3.position.y = 0.0
-    p3.position.z = 0.5
-    p3.orientation.w = 1.0
-    waypoints.append(p3)
-
-    # Send waypoints sequentially
-    client.send_waypoints(waypoints)
-
+    # client.send_waypoints()
+    # client.send_poses()
+    client.send_moves()
     client.destroy_node()
     rclpy.shutdown()
 

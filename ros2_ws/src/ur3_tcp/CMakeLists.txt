@@ -37,8 +37,10 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/MoveWaypoint.srv"
   "srv/MoveNamedPose.srv"
+  "srv/MoveJoints.srv"
   "srv/MakeMove.srv"
   "srv/GripperCmd.srv"
+  "action/MovePiece.action"
   DEPENDENCIES geometry_msgs
 )
 
@@ -85,7 +87,7 @@ target_link_libraries(arm_mover_task ${cpp_typesupport_target})
 # Install
 # -----------------------------------------------------------------------------
 install(
-  DIRECTORY config launch meshes rviz urdf srv
+  DIRECTORY config launch meshes rviz urdf srv action
   DESTINATION share/${PROJECT_NAME}
 )
 

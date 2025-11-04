@@ -3,25 +3,36 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Pose
 from ur3_tcp.srv import MoveWaypoint, MoveNamedPose, MakeMove, GripperCmd, MoveJoints
-
-IDLE_POS = [1.57, -1.57, 0.79, -1.57, -1.57, 0.0]
-OUT_POS = [2.27, -1.36, 1.94, -2.15, -1.57, 0.7]
-
+from rclpy.executors import MultiThreadedExecutor
+import threading
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 
 class MoveMaker(Node):
     def __init__(self):
         super().__init__("move_maker")
-        self.cli_move_waypoint = self.create_client(MoveWaypoint, "move_waypoint")
-        self.cli_move_joints = self.create_client(MoveJoints, "move_waypoint")
+        move_waypoint_cb_group = MutuallyExclusiveCallbackGroup()
+        move_pose_cb_group = MutuallyExclusiveCallbackGroup()
+        make_move_cb_group = MutuallyExclusiveCallbackGroup()
+        self.cli_move_waypoint = self.create_client(MoveWaypoint, "move_waypoint", callback_group=move_waypoint_cb_group)
+        self.cli_move_pose = self.create_client(MoveNamedPose, "move_named_pose", callback_group=move_pose_cb_group)
+
+        if not self.cli_move_waypoint.wait_for_service(timeout_sec=5.0):
+            self.get_logger().error('Service "move_waypoint" not available')
+        else:
+            self.get_logger().info('Service "move_waypoint" available')
+        if not self.cli_move_pose.wait_for_service(timeout_sec=5.0):
+            self.get_logger().error('Service "move_named_pose" not available')
+        else:
+            self.get_logger().info('Service "move_named_pose" available')
+
         self.srv = self.create_service(MakeMove, "make_move", self.make_move_callback)
-        self.cli_gripper = self.create_client(GripperCmd, "gripper_cmd")
-        self.req_waypoint = MoveJoints.Request()
-        self.req_joints = MoveNamedPose.Request()
-        self.req_gripper = GripperCmd.Request()
+        self.get_logger().info("Move maker started")
 
     def make_move_callback(self, request, response):
+        self.get_logger().info("Received move")
         if request.move_type == "regular":
-            result = self.make_regular_move(request.from_sqr, request.to_sqr)
+            self.make_regular_move(request.from_sqr, request.to_sqr)
+            self.go_idle()
         if request.move_type == "castle":
             rank = request.to_sqr[1]
             is_kingside = request.to_sqr[0] == "g"
@@ -31,16 +42,23 @@ class MoveMaker(Node):
             else:
                 from_sqr = "a" + rank
                 to_sqr = "d" + rank
-            result = self.make_regular_move(from_sqr, to_sqr) # rook_move
-            result = self.make_regular_move(request.from_sqr, request.to_sqr) # king_move
+            # rook_move then king_move; both must succeed
+            self.make_regular_move(from_sqr, to_sqr)
+            self.make_regular_move(request.from_sqr, request.to_sqr)
+            self.go_idle()
         if request.move_type == "capture":
-            result = self.make_capture(request.to_sqr)
-            result = self.make_regular_move(request.from_sqr, request.to_sqr)
-        if request.move_type == "en_passant":
-            result = self.make_capture(request.to_sqr)
-            result = self.make_regular_move(request.from_sqr, request.to_sqr)
+            self.make_capture(request.to_sqr)
+            self.make_regular_move(request.from_sqr, request.to_sqr)
+            self.go_idle()
+        if request.move_type == "enpassant":
+            self.make_capture(request.to_sqr)
+            self.make_regular_move(request.from_sqr, request.to_sqr)
+            self.go_idle()
         if request.move_type == "promotion":
             pass
+        response.success = True
+        self.get_logger().info('Service "make_move" available')
+        return response
 
     def send_gripper_cmd(self, cmd):
         self.req_gripper.cmd = cmd
@@ -49,56 +67,69 @@ class MoveMaker(Node):
 
 
     def make_regular_move(self, from_square, to_square):
-        self.req_waypoint.waypoint = self.square_to_pose(from_square)
-        future = self.cli_move_waypoint.call_async(self.req_waypoint)
+        waypoint_request = MoveWaypoint.Request()
+        
+        self.get_logger().info(f"making move...")
+        waypoint_request.waypoint = self.square_to_pose(from_square)
+        future = self.cli_move_waypoint.call_async(waypoint_request)
         rclpy.spin_until_future_complete(self, future)
         response = future.result()
-        if not response.sucess:
-            return False
-        
+        if response.success:
+            self.get_logger().info(f'Waypoint executed successfully')
+        else:
+            self.get_logger().error(f'Failed to execute waypoint : {response.message}')
+
         # CLOSE GRIPPER
 
-        self.req_waypoint.waypoint = self.square_to_pose(to_square)
-        future = self.cli_move_waypoint.call_async(self.req_waypoint)
+        waypoint_request.waypoint = self.square_to_pose(to_square)
+        future = self.cli_move_waypoint.call_async(waypoint_request)
         rclpy.spin_until_future_complete(self, future)
         response = future.result()
-        if not response.sucess:
-            return False
+        if response.success:
+            self.get_logger().info(f'Waypoint executed successfully')
+        else:
+            self.get_logger().error(f'Failed to execute waypoint : {response.message}')
         
         # OPEN GRIPPER
 
-        self.req_joints.angles = IDLE_POS
-        future = self.cli_move_joints.call_async(self.req_joints)
+    def go_idle(self):
+        named_pose_request = MoveNamedPose.Request()
+        named_pose_request.name = "idle"
+        future = self.cli_move_pose.call_async(named_pose_request)
         rclpy.spin_until_future_complete(self, future)
         response = future.result()
-        return response.success
+        if response.success:
+            self.get_logger().info(f'Waypoint executed successfully')
+        else:
+            self.get_logger().error(f'Failed to execute waypoint : {response.message}')
+        
     
     def make_capture(self, captured_square):
-        self.req_waypoint.waypoint = self.square_to_pose(captured_square)
-        future = self.cli_move_waypoint.call_async(self.req_waypoint)
+        waypoint_request = MoveWaypoint.Request()
+        named_pose_request = MoveNamedPose.Request()
+        self.get_logger().info(f"making move capture...")
+        if not self.cli_move_waypoint.wait_for_service(timeout_sec=2.0):
+            self.get_logger().error('move_waypoint service not available when trying to capture')
+            return False
+
+        waypoint_request.waypoint = self.square_to_pose(captured_square)
+        future = self.cli_move_waypoint.call_async(waypoint_request)
         rclpy.spin_until_future_complete(self, future)
         response = future.result()
-        if not response.sucess:
+        if not response.success:
             return False
         # go to trash
 
         # CLOSE GRIPPER
 
-        self.req_joints.angles = OUT_POS
-        future = self.cli_move_joints.call_async(self.req_joints)
+        named_pose_request.name = "out"
+        future = self.cli_move_pose.call_async(named_pose_request)
         rclpy.spin_until_future_complete(self, future)
         response = future.result()
-        if not response.sucess:
+        if not response.success:
             return False
-        # go idle
-
-        # OPEN GRIPPER
         
-        self.req_joints.angles = IDLE_POS
-        future = self.cli_move_joints.call_async(self.req_joints)
-        rclpy.spin_until_future_complete(self, future)
-        response = future.result()
-        return response.success
+        # OPEN GRIPPER
 
     def square_to_pose(
         self,
@@ -121,11 +152,11 @@ class MoveMaker(Node):
         col = ord(square[0]) - 97
 
         a1_cords = chsb_mid[:]
-        a1_cords[0] -= sqr_dim[0] * 3.5
-        a1_cords[1] -= sqr_dim[1] * 3.5
+        a1_cords[0] += sqr_dim[0] * 3.5
+        a1_cords[1] += sqr_dim[1] * 3.5
 
-        pose.position.x = a1_cords[0] + col * sqr_dim[0]
-        pose.position.y = a1_cords[1] + row * sqr_dim[1]
+        pose.position.x = a1_cords[0] - col * sqr_dim[0]
+        pose.position.y = a1_cords[1] - row * sqr_dim[1]
         pose.position.z = board_height + pieces_heights_m["b"] + 0.14
         pose.orientation.x = 1.0
         pose.orientation.y = 0.0
@@ -133,29 +164,20 @@ class MoveMaker(Node):
         pose.orientation.w = 0.0
         return pose
 
-    def send_waypoints(self, waypoints):
-        squares = ["a1", "a8", "h1", "h8"]
-        for sqr in squares:
-            self.get_logger().info(f"Sending square {sqr}")
-
-            self.req.waypoint = self.square_to_pose(sqr)
-            future = self.cli.call_async(self.req)
-            rclpy.spin_until_future_complete(self, future)
-            response = future.result()
-            if response.success:
-                self.get_logger().info(f"Waypoint executed successfully")
-            else:
-                self.get_logger().error(
-                    f"Failed to execute waypoint : {response.message}"
-                )
-
 
 def main(args=None):
     rclpy.init(args=args)
-    client = MoveMaker()
-
-    client.destroy_node()
+    node = MoveMaker()
+    rclpy.spin(node)
     rclpy.shutdown()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    try:
+        executor.spin()
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

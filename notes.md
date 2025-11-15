@@ -32,6 +32,29 @@ Stockfish jest odpowiedzalny za wymyślanie posunięć, następnie ruch jest roz
 * Dodać planowanie trajektorii w czasie zamykania chwytaka. Wykonanie trajektorii dopiero po.
 * Sterownik do chywtaka zgodny z ros2_controll pozwoli na zintegrowanie chwytania z przesuwaniem. Bardzo skomplikowane, mogą być problemy z realizacją tak skomplikowanej trajektorii.
 ## TODO
-Dodać funkcje która na podstawie wykonywanego ruchu rozbija go na składowe.
 
 ##  Detekcja wykonanego ruchu
+Schemata wykrywania ruchu
+
+0. Inicjalizacja, znalezienie szachownicy i zapamiętanie rogów do późniejszej transformacji szachownicy
+1. Sprawdzenia czy nastąpiła zmiana, jakikolowiek ruch względem obrazu po ruchu robota
+2. Sprawdzenie czy kolejne 2-3 klatki są stabline, nie wystąpił żaden ruch
+3. Transformacja obrazu tak aby szachownica była na cały ekran
+4. Odjęcie obrazów żeby sprawdzić jaki ruch został wykonany
+5. Na podstawie poprzedniej pozycji i zmiany wykrycie jaki ruch został wykonany. Kilka przypadków w zależności od typu ruchu
+6. Weryfikacja legaloności ruchu
+7. Komunikat o sukciesie i jaki ruch został wykonany
+8. Ruch robota, następnie przejdź do 1.
+
+Detekcja transformacji szachownicy:
+
+1. Preprocesssing: zmniejszenie obrazu, konwersja do skali szarości, gaussian blur, bilaterlar filter w celu usunięcia szumów i ostrych krawędzi
+2. Canny edge detector i hough line transform, aby wykryć linie na szachownicy.
+3. Filtracja pobranych linii, wyciągnięcie średniej z tych znajdujących się blisko siebie. Następnie odrzucenie tych które raczej nie są liniami wyznaczającymi pola. Różnica między kolejnymi mniejsza od mediany. 
+4. Na podstawie najbardziej wysuniętych linii wyznaczenie obrysu szachownicy
+5. Transformacja szachownicy i podział na grid 8x8
+
+### Pomysły
+* Ignorować małe zmiany, bo człowiek mógł poprawiać figury. 
+* Wykrywać zmiany przed czy po transformacji? Chyba lepiej po bo ktoś mógł coś postawić obok szachownicy.
+* 

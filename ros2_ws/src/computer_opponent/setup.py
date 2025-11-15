@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+from glob import glob
+import os
 
 package_name = 'computer_opponent'
 
@@ -10,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -32,6 +35,7 @@ setup(
             'gripper_driver = computer_opponent.gripper_driver:main',
             'test_client = computer_opponent.test_client:main',
             'move_proxy = computer_opponent.move_proxy:main',
+            'capture_image = computer_opponent.capture_image:main',
         ],
     },
 )

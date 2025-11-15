@@ -75,9 +75,6 @@ class StockfishPlayer(Node):
         self.board.push(result.move)
         self.get_logger().info(f'BOARD:\n{self.board}')
         
-
-
-
     def make_move_on_board(self, move: chess.Move):
         move_uci = move.uci()
         

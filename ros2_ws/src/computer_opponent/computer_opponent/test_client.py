@@ -16,7 +16,7 @@ class TestClient(Node):
 
 
     def send_waypoints(self, waypoints):
-        squares = ["open", "close", "open", "close"]
+        squares = ["open", "close", "open"]
         for sqr in squares:
             self.get_logger().info(f'Sending square {sqr}')
             self.req.action =  sqr

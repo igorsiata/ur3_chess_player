@@ -27,7 +27,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'stockfish_player = computer_opponent.stockfish_player:main',
+            'stockfish_node = computer_opponent.stockfish_node:main',
             'human_player = computer_opponent.human_player:main',
             'pose_listener_moveit2 = my_robot_control.pose_listener_moveit2:main',
             'simple_client = computer_opponent.simple_client:main',

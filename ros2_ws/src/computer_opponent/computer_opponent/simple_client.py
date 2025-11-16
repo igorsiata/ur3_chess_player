@@ -19,7 +19,7 @@ class ArmMoverClient(Node):
 
     def square_to_pose(self, square: str,) -> Pose:
         chsb_mid = [0.0, 0.3]
-        sqr_dim = [0.037, 0.037]
+        sqr_dim = [0.0374, 0.0374]
         pieces_heights_m = {
             'p': 0.06,
             'k': 0.08,
@@ -80,8 +80,8 @@ class ArmMoverClient(Node):
 
     
     def send_moves(self):
-        moves = ["e1g1"]
-        move_types = ["castle"]
+        moves = ["b2b1"]
+        move_types = ["promotion"]
         for m, mt in zip(moves, move_types):
             self.get_logger().info(f'Sending move: {mt}, {m}')
         

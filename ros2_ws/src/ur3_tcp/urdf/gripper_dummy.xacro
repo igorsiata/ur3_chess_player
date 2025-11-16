@@ -7,9 +7,10 @@
   <xacro:macro name="gripper_dummy" params="prefix parent_link offset_xyz:='0 0 0' offset_rpy:='0 0 0'">
 
     <!-- ==================== PARAMETERS ==================== -->
-    <xacro:property name="sphere_radius" value="0.01"/> <!-- 1 cm radius -->
+    <xacro:property name="sphere_radius" value="0.0175"/> <!-- 1 cm radius -->
     <xacro:property name="gripper_radius" value="0.06"/> <!-- 1 cm radius -->
-    <xacro:property name="gripper_length" value="0.08"/> <!-- 1 cm radius -->
+    <xacro:property name="gripper_length" value="0.14"/> <!-- 1 cm radius -->
+    <xacro:property name="gripper_colisions_length" value="0.1"/> 
     <xacro:property name="sphere_color_orange" value="1.0 0.5 0.0 1.0"/> <!-- Orange RGBA -->
     <xacro:property name="sphere_color_green" value="0.3 1.0 0.3 1.0"/> <!-- green RGBA -->
 

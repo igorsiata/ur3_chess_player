@@ -303,14 +303,14 @@ mtc::Task ArmMoverTask::createWaypointTask(const geometry_msgs::msg::Pose &pose)
     if (!is_home_position_){
         auto stage = std::make_unique<mtc::stages::MoveRelative>("retreat", cartesian_planner);
         stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        stage->setMinMaxDistance(0.015, 0.025);
+        stage->setMinMaxDistance(0.095, 0.105);
         stage->setIKFrame(hand_frame);
         stage->properties().set("marker_ns", "retreat");
 
         // Set retreat direction
         geometry_msgs::msg::Vector3Stamped vec;
         vec.header.frame_id = "base_link";
-        vec.vector.z = 0.02;
+        vec.vector.z = 0.1;
         stage->setDirection(vec);
         task.add(std::move(stage));
     }
@@ -348,14 +348,14 @@ mtc::Task ArmMoverTask::createWaypointTask(const geometry_msgs::msg::Pose &pose)
     {
         auto stage = std::make_unique<mtc::stages::MoveRelative>("aproach", cartesian_planner);
         stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        stage->setMinMaxDistance(0.045, 0.055);
+        stage->setMinMaxDistance(0.095, 0.105);
         stage->setIKFrame(hand_frame);
         stage->properties().set("marker_ns", "aproach");
 
         // Set retreat direction
         geometry_msgs::msg::Vector3Stamped vec;
         vec.header.frame_id = "base_link";
-        vec.vector.z = -0.05;
+        vec.vector.z = -0.1;
         stage->setDirection(vec);
         task.add(std::move(stage));
     }

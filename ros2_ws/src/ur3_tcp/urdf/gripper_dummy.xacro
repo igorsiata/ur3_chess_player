@@ -8,19 +8,22 @@
 
     <!-- ==================== PARAMETERS ==================== -->
     <xacro:property name="sphere_radius" value="0.01"/> <!-- 1 cm radius -->
-    <xacro:property name="gripper_radius" value="0.05"/> <!-- 1 cm radius -->
-    <xacro:property name="gripper_length" value="0.06"/> <!-- 1 cm radius -->
+    <xacro:property name="gripper_radius" value="0.06"/> <!-- 1 cm radius -->
+    <xacro:property name="gripper_length" value="0.08"/> <!-- 1 cm radius -->
     <xacro:property name="sphere_color_orange" value="1.0 0.5 0.0 1.0"/> <!-- Orange RGBA -->
     <xacro:property name="sphere_color_green" value="0.3 1.0 0.3 1.0"/> <!-- green RGBA -->
 
     <!-- ==================== VISUAL SPHERE ==================== -->
     <link name="${prefix}_gripper_dummy">
       <visual>
-      <origin xyz="0 0 0.06" rpy="${offset_rpy}"/>
+      <origin xyz="0 0 ${gripper_length/2}" rpy="${offset_rpy}"/>
         <geometry>
         
           <sphere radius="${sphere_radius}"/>
         </geometry>
+        <!-- <geometry>
+          <cylinder radius="${gripper_radius}" length="${gripper_length}"/>
+        </geometry> -->
         <material name="green">
           <color rgba="${sphere_color_green}"/>
         </material>

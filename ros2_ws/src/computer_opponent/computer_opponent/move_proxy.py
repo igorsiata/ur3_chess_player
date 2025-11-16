@@ -145,7 +145,11 @@ class MoveMaker(Node):
             "q": 0.08,
             "k": 0.08,
         }
-        board_height = 0.0024
+
+        board_height = 0.024
+        gripper_to_tool0_distance = 0.165
+        piece_gripping_distance = 0.01
+        veritcal_move_offset = 0.06
 
         pose = Pose()
         row = int(square[1]) - 1
@@ -157,7 +161,7 @@ class MoveMaker(Node):
 
         pose.position.x = a1_cords[0] - col * sqr_dim[0]
         pose.position.y = a1_cords[1] - row * sqr_dim[1]
-        pose.position.z = board_height + pieces_heights_m["b"] + 0.14
+        pose.position.z = board_height + piece_gripping_distance + gripper_to_tool0_distance + veritcal_move_offset
         pose.orientation.x = 1.0
         pose.orientation.y = 0.0
         pose.orientation.z = 0.0

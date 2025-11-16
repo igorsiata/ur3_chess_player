@@ -4,4 +4,4 @@ install
 .vscode
 __pycache__
 .venv
-secretes.h
+secrets.h

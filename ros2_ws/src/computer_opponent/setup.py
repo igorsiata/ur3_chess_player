@@ -28,14 +28,14 @@ setup(
     entry_points={
         'console_scripts': [
             'stockfish_node = computer_opponent.stockfish_node:main',
-            'human_player = computer_opponent.human_player:main',
+            'console_input = computer_opponent.console_input:main',
             'pose_listener_moveit2 = my_robot_control.pose_listener_moveit2:main',
             'simple_client = computer_opponent.simple_client:main',
             'test_ik = computer_opponent.test_ik:main',
             'gripper_driver = computer_opponent.gripper_driver:main',
             'test_client = computer_opponent.test_client:main',
             'move_proxy = computer_opponent.move_proxy:main',
-            'capture_image = computer_opponent.capture_image:main',
+            'human_move_detection = computer_opponent.human_move_detection:main',
         ],
     },
 )

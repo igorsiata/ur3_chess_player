@@ -3,7 +3,7 @@ from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, TimerAction
 from launch.event_handlers import OnProcessStart
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
 
 def generate_launch_description():
@@ -16,11 +16,36 @@ def generate_launch_description():
     stockfish_skill_lvl_arg = DeclareLaunchArgument(
         "stockfish_skill_lvl", default_value="5", description="Level of stockfish"
     )
+    human_is_white_arg = DeclareLaunchArgument(
+        "human_is_white",
+        default_value="true",
+        description="Is human playing as white pieces",
+    )
 
-    white_player = Node(
+    camera_node = Node(
+        package="v4l2_camera",
+        executable="v4l2_camera_node",
+        name="camera",
+        output="screen",
+        parameters=[
+            {
+                "video_device": "/dev/video0",
+                "pixel_format": "mjpg",
+                "image_size": [1280, 720],
+                "framerate": 5,
+                # "contrast": 10,
+                # "sharpness": 5,
+                # "saturation": 50,
+                # "white_balance_automatic": False,
+                # "white_balance_temperature": 4500,
+            }
+        ],
+    )
+
+    human_player = Node(
         package="computer_opponent",
-        executable="stockfish_node",
-        name="stockfish_node_white",
+        executable="human_move_detection",
+        name="human_move_detection_node",
         parameters=[
             {
                 "is_white": True,
@@ -31,7 +56,7 @@ def generate_launch_description():
     )
 
     # Second node
-    black_player = Node(
+    robot_player = Node(
         package="computer_opponent",
         executable="stockfish_node",
         name="stockfish_node_black",
@@ -51,25 +76,25 @@ def generate_launch_description():
     )
 
     # Only start node2 after node1 starts
-    delayed_white_player = RegisterEventHandler(
+    delayed_robot_player = RegisterEventHandler(
         OnProcessStart(
             target_action=move_proxy,
             on_start=[
                 TimerAction(
                     period=0.5,
-                    actions=[white_player],  # wait 0.5s to ensure node1 initialized
+                    actions=[robot_player],  # wait 0.5s to ensure node1 initialized
                 )
             ],
         )
     )
 
-    delayed_black_player = RegisterEventHandler(
+    delayed_human_player = RegisterEventHandler(
         OnProcessStart(
             target_action=move_proxy,
             on_start=[
                 TimerAction(
                     period=0.5,
-                    actions=[black_player],  # wait 0.5s to ensure node1 initialized
+                    actions=[human_player],  # wait 0.5s to ensure node1 initialized
                 )
             ],
         )
@@ -77,10 +102,12 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            human_is_white_arg,
             stockfish_skill_lvl_arg,
             start_position_arg,
             move_proxy,
-            delayed_black_player,
-            delayed_white_player,
+            camera_node,
+            delayed_human_player,
+            delayed_robot_player,
         ]
     )

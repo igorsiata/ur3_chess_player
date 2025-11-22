@@ -65,6 +65,7 @@ class MoveMaker(Node):
         if request.move_type == "promotion":
             self.make_capture(request.from_sqr)
             self.promote_queen(request.to_sqr)
+            self.go_idle()
         response.success = True
         self.get_logger().info('Service "make_move" available')
         return response

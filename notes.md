@@ -58,3 +58,14 @@ Detekcja transformacji szachownicy:
 * Ignorować małe zmiany, bo człowiek mógł poprawiać figury. 
 * Wykrywać zmiany przed czy po transformacji? Chyba lepiej po bo ktoś mógł coś postawić obok szachownicy.
 * 
+
+## MISC
+* Gra z robotem działa, dobrze rozpoznaje ruchy białych pionków
+* Poprawić rozpoznawanie ruchów, roszada, itp
+* Sprawdzić czy ruch jest legalny przed jego wysłaniem
+* Chwytak z gąbek
+
+## Sugenstie promotora
+* Wykrywanie kontaktu z człowiekiem przez ograniczenie momentów na przegubach
+* Dwustopniowe bezpieczeństwo, jeszcze system wizyjny
+* Pionek upusczany na szachownice a nie stawiany

@@ -23,6 +23,7 @@ class StockfishNode(Node):
         self.is_white = self.get_parameter("is_white").value
         enemy_move_topic = "black_move" if self.is_white else "white_move"
         your_move_topic = "white_move" if self.is_white else "black_move"
+        self.state = "idle"
 
         self.move_client_ = self.create_client(
             MakeMove, "make_move", callback_group=make_move_cb_group
@@ -50,15 +51,16 @@ class StockfishNode(Node):
                 "UCI_LimitStrength": False,
             }
         )
-        self.print_game_status()
 
     def state_callback_(self, msg):
         if msg.data == "start_game":
-            if self.is_white:
-                self.stockfish_make_move()
-                self.print_game_status()
             self.state = "playing"
             self.get_logger().info("\033[1;32m Stocfish engine: game started! \033[0m")
+            if self.is_white:
+                self.print_game_status()
+                self.stockfish_make_move()
+                
+            
 
 
     def enemy_move_callback_(self, msg):
@@ -99,13 +101,10 @@ class StockfishNode(Node):
             self.get_logger().info(f"Game over: {self.board.result()}")
             return
         result = self.engine.play(self.board, chess.engine.Limit(time=0.5))
-        move = chess.Move.from_uci("g7h8b")
-        move = self.always_promote_to_queen(result.move)
+        move = result.move
         self.make_move_on_board(move)
-        self.get_logger().info(f"Makinng move: {move}")
         self.board.push(move)
         self.publish_move(move)
-        self.get_logger().info(f"BOARD:\n{self.board}")
 
     def always_promote_to_queen(self, move: chess.Move):
         if move.promotion != None:

@@ -1,6 +1,8 @@
-string move_type
+int32 move_type
 string from_sqr
 string to_sqr
+char moved_piece
+char captured_piece
 ---
 bool success
 string message

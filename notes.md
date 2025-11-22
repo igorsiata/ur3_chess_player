@@ -69,3 +69,18 @@ Detekcja transformacji szachownicy:
 * Wykrywanie kontaktu z człowiekiem przez ograniczenie momentów na przegubach
 * Dwustopniowe bezpieczeństwo, jeszcze system wizyjny
 * Pionek upusczany na szachownice a nie stawiany
+
+
+### MakeMove service
+* move_type = {promotion, capture_promotion, castle, capture, regular, enpassant}
+* from_sqr = "e2"
+* to_sqr = "e2"
+* moved_pice = {p, n, b, r, q, k}
+* captured_piece = {p, n, b, r, q, k} opcjonalnie
+---
+* success
+* message
+
+### Gripper cmd service
+* open
+* close(piece)

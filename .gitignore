@@ -6,3 +6,4 @@ __pycache__
 .venv
 secrets.h
 vision_system/img
+temp_f

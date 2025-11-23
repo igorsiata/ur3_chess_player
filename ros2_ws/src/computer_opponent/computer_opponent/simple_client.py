@@ -98,7 +98,7 @@ class ArmMoverClient(Node):
                 )
 
     def send_moves(self):
-        moves = ["e2e4", "h1h8", "e1g1", "b4c3", "a2a1", "d7e8"]
+        moves = ["e2e4", "h1h8", "e8c8", "b4c3", "a2a1", "e7f8"]
         move_types = [
             MoveType.REGULAR,
             MoveType.CAPTURE,
@@ -107,12 +107,23 @@ class ArmMoverClient(Node):
             MoveType.PROMOTION,
             MoveType.CAPTURE_PROMOTION
         ]
-        for m, mt in zip(moves[3:], move_types[3:]):
+        moved_pieces = ["q", "r", "k", "p", "p", "p"]
+        captured_pieces = ["x", "b", "x", "p", "p", "n"]
+        # moves = ["h7h8"]
+        # move_types = [
+        #     MoveType.REGULAR,
+
+        # ]
+        # moved_pieces = ["p"]
+        # captured_pieces = ["p"]
+        for m, mt, p, cp in zip(moves, move_types, moved_pieces, captured_pieces):
             self.get_logger().info(f"Sending move: {mt}, {m}")
 
             self.req_move.from_sqr = m[:2]
             self.req_move.to_sqr = m[2:]
             self.req_move.move_type = mt.value
+            self.req_move.moved_piece = ord(p)
+            self.req_move.captured_piece = ord(cp)
             future = self.cli_move.call_async(self.req_move)
             rclpy.spin_until_future_complete(self, future)
             response = future.result()

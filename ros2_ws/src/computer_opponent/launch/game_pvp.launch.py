@@ -43,14 +43,9 @@ def generate_launch_description():
         parameters=[
             {
                 "video_device": "/dev/video0",
-                "pixel_format": "mjpg",
-                "image_size": [1280, 720],
-                "framerate": 5,
-                # "contrast": 10,
-                # "sharpness": 5,
-                # "saturation": 50,
-                # "white_balance_automatic": False,
-                # "white_balance_temperature": 4500,
+                # "pixel_format": "mjpg",
+                "image_size": [1920, 1080],
+                "framerate": 30,
             }
         ],
     )
@@ -69,7 +64,7 @@ def generate_launch_description():
 
     human_player_black = Node(
         package="computer_opponent",
-        executable="console_input",
+        executable="human_move_detection",
         name="human_black",
         parameters=[
             {
@@ -79,33 +74,16 @@ def generate_launch_description():
         ],
     )
 
-    delayed_white_player = RegisterEventHandler(
-        OnProcessStart(
-            target_action=camera_node,
-            on_start=[
-                TimerAction(
-                    period=0.5,
-                    actions=[
-                        human_player_white
-                    ],  # wait 0.5s to ensure node1 initialized
-                )
-            ],
-        )
+    delayed_white_player = TimerAction(
+        period=2.0,
+        actions=[human_player_white],  # wait 0.5s to ensure node1 initialized
     )
 
-    delayed_black_player = RegisterEventHandler(
-        OnProcessStart(
-            target_action=camera_node,
-            on_start=[
-                TimerAction(
-                    period=0.5,
-                    actions=[
-                        human_player_black
-                    ],  # wait 0.5s to ensure node1 initialized
-                )
-            ],
-        )
+    delayed_black_player = TimerAction(
+        period=2.0,
+        actions=[human_player_black],  # wait 0.5s to ensure node1 initialized
     )
+
 
     return LaunchDescription(
         [

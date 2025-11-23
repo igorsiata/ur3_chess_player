@@ -11,8 +11,12 @@ from datetime import datetime
 import time
 import threading
 import numpy as np
-from computer_opponent.move_detection import MoveDetector
+from computer_opponent.move_detection import MoveDetector, find_transform_from_corners
 import chess
+import torch
+from torchvision import transforms
+from PIL import Image as PILImage
+from computer_opponent.chess_cnn import ChessCNN
 
 
 class MoveDetectionNode(Node):
@@ -32,7 +36,7 @@ class MoveDetectionNode(Node):
             Image, "/image_raw", self.image_callback, 10
         )
         self.state_sub = self.create_subscription(
-            String, "set_state", self.state_callback_, 10
+            String, "/set_state", self.state_callback_, 10
         )
         self.move_sub = self.create_subscription(
             String, enemy_move_topic, self.update_board_callback_, 10
@@ -40,42 +44,181 @@ class MoveDetectionNode(Node):
         self.move_pub = self.create_publisher(String, your_move_topic, 10)
         self.img_pub = self.create_publisher(Image, "/move_detected", 10)
 
+        self.img_size = (800, 800)
         self.bridge = CvBridge()
         self.timer = None
         self.counter = 0
         self.last_frame = None
-        self.move_detector = MoveDetector(
-            self.get_parameter("start_position_fen").value
-        )
+        self.curr_frame = None
+        self.board = chess.Board(self.get_parameter("start_position_fen").value)
         self.state = "idle"  # calibrated, playing
+
+        self.DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = ChessCNN().to(self.DEVICE)
+        self.model.load_state_dict(
+            torch.load(
+                "/home/igorsiata/ur3_chess_player/vision_system/model_weights.pth",
+                map_location=self.DEVICE,
+            )
+        )
+        self.model.eval()
+
+        self.labels = [".", "w", "b"]
 
         # Output folder
         # os.makedirs(self.output_dir, exist_ok=True)
         # threading.Thread(target=self.read_input_loop, daemon=True).start()
 
+    transform = transforms.Compose(
+        [
+            transforms.Resize((64, 64)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
+        ]
+    )
+
     def image_callback(self, msg):
         img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        self.last_frame = img
+        self.curr_frame = self.crop_img(img)
 
     def timer_callback_(self):
         if not self.is_your_turn:
             return
+        if self.curr_frame is None:
+            return
+        self.detect_move()
+        # self.save_image(self.last_frame)
+
+    def classify_square(self, img):
+
+        labels = ["b", ".", "w"]
+        img = self.transform(img).unsqueeze(0).to(self.DEVICE)
+        with torch.no_grad():
+            out = self.model(img)
+            cls = out.argmax(1).item()
+        return labels[cls]
+
+    def detect_move(self):
+        move_discard_thresh = 2000
+        img = cv2.warpPerspective(self.curr_frame, self.trsf_matrix, self.img_size)
+
+        if self.curr_frame is None:
+            return None, None
         if self.last_frame is None:
-            return
-        # img = self.crop_last_image()
-        # self.save_image(img)
-        if not self.is_your_turn:
-            return
-        move, img = self.move_detector.detect_move(self.last_frame)
-        if move is not None:
+            self.last_frame = img
+            print("last frame is none")
+            return None, None
+
+        diff = cv2.absdiff(
+            cv2.cvtColor(img, cv2.COLOR_RGB2GRAY),
+            cv2.cvtColor(self.last_frame, cv2.COLOR_RGB2GRAY),
+        )
+        _, diff_thresh = cv2.threshold(diff, 60, 1, cv2.THRESH_BINARY)
+        diff_thresh = cv2.erode(diff_thresh, (3, 3), iterations=1)
+        move_count = np.sum(diff_thresh)
+
+        self.last_frame = img
+        if move_count >= move_discard_thresh:
+            print("too much movement")
+
+            return None, None
+
+        # Split into 64 squares
+        
+        msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
+        self.img_pub.publish(msg)
+        player_pieces = "w" if self.is_white else "b"
+        squares = []
+        board_str = "\n"
+        for row in range(8):
+            for col in range(8):
+                sq = img[row * 100 : (row + 1) * 100, col * 100 : (col + 1) * 100]
+                square_pil = PILImage.fromarray(cv2.cvtColor(sq, cv2.COLOR_BGR2RGB))
+                label = self.classify_square(square_pil)
+                if label == player_pieces:
+                    squares.append(row + col * 8)
+                board_str += f"{label} "
+                if col == 7:
+                    board_str += "\n"
+
+        # self.get_logger().info(f"Published board: {board_str}")
+
+        if self.is_white:
+            chess_color = chess.WHITE
+            piece_label = 1
+        else:
+            chess_color = chess.BLACK
+            piece_label = 2
+
+        white_squares = (
+            list(self.board.pieces(chess.PAWN, chess_color))
+            + list(self.board.pieces(chess.KNIGHT, chess_color))
+            + list(self.board.pieces(chess.BISHOP, chess_color))
+            + list(self.board.pieces(chess.ROOK, chess_color))
+            + list(self.board.pieces(chess.QUEEN, chess_color))
+            + list(self.board.pieces(chess.KING, chess_color))
+        )
+
+        # self.get_logger().info(f"Published board: {white_squares}")
+        moved_piece = list(set(white_squares) - set(squares))
+        dest = list(set(squares) - set(white_squares))
+        move_str = None
+        # normal move, capture, enpassant
+        if len(moved_piece) == 1 and len(dest) == 1:
+            start_sq = moved_piece[0]
+            end_sq = dest[0]
+            move_str = self.square64_to_str(start_sq) + self.square64_to_str(end_sq)
+
+            # Check if the piece is a pawn
+            moving_piece_type = self.board.piece_type_at(start_sq)
+            if moving_piece_type == chess.PAWN:
+                start_rank = start_sq // 8
+                end_rank = end_sq // 8
+                if self.is_white and start_rank == 6 and end_rank == 7:
+                    move_str += "q" 
+                elif not self.is_white and start_rank == 1 and end_rank == 0:
+                    move_str += "q"
+        if len(moved_piece) == 2 and len(dest) == 2:
+            castles_lookup = [(0, 4), (4, 7), (56, 60), (60, 63)]  # rook & king initial positions
+            dest_castles = [(2, 3), (6, 7), (58, 59), (61, 62)]    # rook & king final positions
+            castles_notation = ["e1c1", "e1g1", "e8c8", "e8g8"]  # chess notation
+            
+            moved_piece_sorted = tuple(sorted(moved_piece))
+            dest_sorted = tuple(sorted(dest))
+
+            if moved_piece_sorted in castles_lookup and dest_sorted in dest_castles:
+                idx = castles_lookup.index(moved_piece_sorted)
+                if idx == dest_castles.index(dest_sorted):
+                    move_str = castles_notation[idx]
+        
+
+
+        if not move_str:
+            return None
+        self.get_logger().info(f"Piece moved {move_str}")
+        try:
+            move = chess.Move.from_uci(move_str)
+        except ValueError:
+            self.get_logger().info("Received not valid move format")
+            return None
+        if move not in self.board.legal_moves:
+            self.get_logger().info("Received illegal move")
+        else:
+            self.get_logger().info("Received legal move")
+            self.board.push(move)
+            self.get_logger().info(f"BOARD: \n{self.board}")
             msg = String()
-            msg.data = move
+            msg.data = move_str
             self.move_pub.publish(msg)
-            self.is_your_turn = False
-            self.get_logger().info(f"Detected move: {move}")
-            self.get_logger().info(f"BOARD:\n{self.move_detector.board}")
-        if img is not None:
-            self.publish_image(img)
+
+    def square64_to_str(self, sqr64):
+        col = int(sqr64 % 8)
+        row = int(sqr64 // 8)
+
+        col_letter = chr(ord("a") + col)
+        row_number = str(row + 1)
+
+        return f"{col_letter}{row_number}"
 
     def state_callback_(self, msg):
         # if not self.last_frame:
@@ -84,22 +227,22 @@ class MoveDetectionNode(Node):
         #     )
         if msg.data == "calibrate":
             corners = [[502.0, 358.0], [246.0, 360.0], [505.0, 107.0], [249.0, 103.0]]
-            self.move_detector.find_transform_from_corners(self.last_frame, corners)
+            # self.move_detector.find_transform_from_corners(self.last_frame, corners)
             self.state = "calibrated"
             self.get_logger().info("Calibrated")
         if msg.data == "start_game":
-            self.save_image(self.last_frame)
-            corners = [[938.0, 555.0], [514.0, 555.0], [946.0, 138.0], [518.0, 133.0]]
-            self.move_detector.find_transform_from_corners(self.last_frame, corners)
+            # self.save_image(self.last_frame)
+            corners = [[977.0, 807.0], [398.0, 804.0], [960.0, 235.0], [398.0, 245.0]]
+            self.trsf_matrix = self.find_transform_from_corners(corners)
             self.state = "calibrated"
             self.get_logger().info("Calibrated")
-            if self.move_detector.trsf_matrix is None:
+            if self.trsf_matrix is None:
                 self.get_logger().error(
                     "Cant start game without transform, run calibrate first"
                 )
             self.state = "playing"
             self.is_your_turn = self.get_parameter("is_white").value
-            self.timer = self.create_timer(0.5, self.timer_callback_)
+            self.timer = self.create_timer(1.0, self.timer_callback_)
             self.get_logger().info("\033[1;32m Game started! \033[0m")
 
     def update_board_callback_(self, msg):
@@ -109,27 +252,27 @@ class MoveDetectionNode(Node):
             self.get_logger().info("Received not valid move format")
             return
 
-        if move not in self.move_detector.board.legal_moves:
+        if move not in self.board.legal_moves:
             self.get_logger().info("Received illegal move")
             return
         else:
             self.get_logger().info("Received legal move")
-        self.move_detector.board.push(move)
+        self.board.push(move)
         self.is_your_turn = True
-        self.move_detector.last_stable_frame = None
+        self.last_stable_frame = None
 
-    def crop_last_image(self):
+    def crop_img(self, img):
         # ROI parameters (adjust as needed)
-        x_offset = 300  # top-left corner X
-        y_offset = 0  # top-left corner Y
-        width = 800  # width of crop
-        height = 600  # height of crop
-        roi = self.last_frame[y_offset : y_offset + height, x_offset : x_offset + width]
+        x_offset = 500  # top-left corner X
+        y_offset = 150  # top-left corner Y
+        width = 1920 - 500 - 200  # width of crop
+        height = 1080 - 150  # height of crop
+        roi = img[y_offset : y_offset + height, x_offset : x_offset + width]
         return roi
 
     def save_image(self, img):
         output_dir = "/home/igorsiata/ur3_chess_player/vision_system/img/game"
-        filename = os.path.join(output_dir, f"move{self.counter}.png")
+        filename = os.path.join(output_dir, f"moveq{self.counter}.png")
         cv2.imwrite(filename, img)
         self.get_logger().info(f"Saved image: {filename}")
         self.counter += 1
@@ -147,6 +290,26 @@ class MoveDetectionNode(Node):
         msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
         self.img_pub.publish(msg)
         # self.get_logger().info('Image published!')
+
+    def find_transform_from_corners(self, corners):
+        def order_points(pts):
+            rect = np.zeros((4, 2), dtype="float32")
+            s = pts.sum(axis=1)
+            rect[0] = pts[np.argmin(s)]  # top-left
+            rect[3] = pts[np.argmax(s)]  # bottom-right
+
+            diff = np.diff(pts, axis=1)
+            rect[1] = pts[np.argmin(diff)]  # top-right
+            rect[2] = pts[np.argmax(diff)]  # bottom-left
+
+            return rect
+
+        width, height = 800, 800
+        corners = np.float32(corners)
+        corners = order_points(corners)
+        pts2 = np.float32([[0, 0], [width, 0], [0, height], [width, height]])
+        matrix = cv2.getPerspectiveTransform(corners, pts2)
+        return matrix
 
 
 def main(args=None):

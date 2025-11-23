@@ -15,8 +15,8 @@ class TestClient(Node):
         self.req = GripperCmd.Request()
 
 
-    def send_waypoints(self, waypoints):
-        squares = ["open", "close", "open"]
+    def send_waypoints(self):
+        squares = ["open", "close_q"]
         for sqr in squares:
             self.get_logger().info(f'Sending square {sqr}')
             self.req.action =  sqr
@@ -27,40 +27,13 @@ class TestClient(Node):
                 self.get_logger().info(f'Waypoint executed successfully')
             else:
                 self.get_logger().error(f'Failed to execute waypoint : {response.message}')
-            # time.sleep(2)
 
                     
 
 def main(args=None):
     rclpy.init(args=args)
     client = TestClient()
-
-    # Example: define some waypoints
-    waypoints = []
-
-    p1 = Pose()
-    p1.position.x = 0.3
-    p1.position.y = 0.0
-    p1.position.z = 0.5
-    p1.orientation.w = 1.0
-    waypoints.append(p1)
-
-    p2 = Pose()
-    p2.position.x = 0.4
-    p2.position.y = 0.1
-    p2.position.z = 0.5
-    p2.orientation.w = 1.0
-    waypoints.append(p2)
-
-    p3 = Pose()
-    p3.position.x = 0.5
-    p3.position.y = 0.0
-    p3.position.z = 0.5
-    p3.orientation.w = 1.0
-    waypoints.append(p3)
-
-    # Send waypoints sequentially
-    client.send_waypoints(waypoints)
+    client.send_waypoints()
 
     client.destroy_node()
     rclpy.shutdown()

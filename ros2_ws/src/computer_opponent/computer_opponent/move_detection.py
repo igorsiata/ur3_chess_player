@@ -331,6 +331,8 @@ def divide_chessboard(img, show_output=False):
         plt.show()
     return cv2.cvtColor(img_vis, cv2.COLOR_BGR2RGB)
 
+def find_transform_from_corners(img, corners):
+        return transform_image(img, corners, False)
 
 class MoveDetector:
     def __init__(
@@ -381,8 +383,8 @@ class MoveDetector:
             return None, None
 
         diff = cv2.absdiff(self.last_frame, new_frame)
-        _, diff_thresh = cv2.threshold(diff, 15, 1, cv2.THRESH_BINARY)
-        diff_thresh = cv2.erode(diff_thresh, (3, 3), iterations=2)
+        _, diff_thresh = cv2.threshold(diff, 30, 1, cv2.THRESH_BINARY)
+        diff_thresh = cv2.erode(diff_thresh, (3, 3), iterations=1)
         move_count = np.sum(diff_thresh)
         print("MOVE COUNT", move_count)
 
@@ -396,8 +398,8 @@ class MoveDetector:
             return None, None
 
         diff = cv2.absdiff(self.last_stable_frame, new_frame)
-        _, diff_thresh = cv2.threshold(diff, 15 , 1, cv2.THRESH_BINARY)
-        diff_thresh = cv2.erode(diff_thresh, (3, 3), iterations=2)
+        _, diff_thresh = cv2.threshold(diff, 30 , 1, cv2.THRESH_BINARY)
+        diff_thresh = cv2.erode(diff_thresh, (3, 3), iterations=1)
 
         block_size = 100
         blocks = diff_thresh.reshape(8, block_size, 8, block_size)

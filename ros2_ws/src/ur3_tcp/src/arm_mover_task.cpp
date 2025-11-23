@@ -78,8 +78,9 @@ class ArmMoverTask : public rclcpp::Node {
   rclcpp::Node::SharedPtr node_;
 
   int promotionCount_ = 0;
-  const std::string extraQueenSquares_[2] = {"^8", "^7"};
+  const std::string extraQueenSquares_[2] = {"^6", "^5"};
 
+  rclcpp::CallbackGroup::SharedPtr gripper_cb_group_;
   rclcpp::Client<ur3_tcp::srv::GripperCmd>::SharedPtr gripper_cli;
   rclcpp::Service<ur3_tcp::srv::MakeMove>::SharedPtr makeMoveService_;
 };
@@ -92,7 +93,12 @@ ArmMoverTask::ArmMoverTask(const rclcpp::NodeOptions& options)
   is_home_position_ = true;
   makeMoveService_ = create_service<ur3_tcp::srv::MakeMove>(
       "make_move", std::bind(&ArmMoverTask::makeMoveCallback, this, _1, _2));
-  gripper_cli = create_client<ur3_tcp::srv::GripperCmd>("gripper_cmd");
+
+  gripper_cb_group_ =
+      this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+  gripper_cli = create_client<ur3_tcp::srv::GripperCmd>(
+      "gripper_cmd", rmw_qos_profile_services_default, gripper_cb_group_);
   RCLCPP_INFO(get_logger(), "ArmMoverTask service ready.");
 }
 
@@ -157,7 +163,7 @@ void ArmMoverTask::makeMoveCallback(
     }
     case MoveType::PROMOTION: {
       bool success = true;
-      success &= makeCapture(request->from_sqr, request->captured_piece);
+      success &= makeCapture(request->from_sqr, request->moved_piece);
       success &= makePromotion(request->to_sqr, 'q');
       success &= moveNamedPose("idle");
       response->success = success;
@@ -166,7 +172,7 @@ void ArmMoverTask::makeMoveCallback(
     case MoveType::CAPTURE_PROMOTION: {
       bool success = true;
       success &= makeCapture(request->to_sqr, request->captured_piece);
-      success &= makeCapture(request->from_sqr, request->captured_piece);
+      success &= makeCapture(request->from_sqr, request->moved_piece);
       success &= makePromotion(request->to_sqr, 'q');
       success &= moveNamedPose("idle");
       response->success = success;
@@ -217,9 +223,17 @@ bool ArmMoverTask::makePromotion(const std::string& toSqr, char piece = 'q') {
 }
 
 bool ArmMoverTask::sendGripperCmd(const std::string& command) {
-  const std::string msg = "GRIPPER EXECUTED CMD " + command + "\n";
-  RCLCPP_INFO(get_logger(), "%s", msg.c_str());
-  return true;
+    auto request = std::make_shared<ur3_tcp::srv::GripperCmd::Request>();
+    request->action = command;
+
+    auto future = gripper_cli->async_send_request(request);
+    if (future.wait_for(std::chrono::seconds(3)) != std::future_status::ready) {
+        RCLCPP_ERROR(this->get_logger(), "Gripper response timeout");
+        return false;
+    }
+
+    auto resp = future.get();
+    return resp->success;
 }
 
 geometry_msgs::msg::Pose ArmMoverTask::squareToPose(

@@ -15,6 +15,9 @@
   <depend>trajectory_msgs</depend>
   <depend>ur3_tcp</depend>
   <depend>numpy</depend>
+  <depend>torch</depend>
+  <depend>PIL</depend>
+  <depend>torchvision</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

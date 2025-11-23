@@ -12,9 +12,17 @@ ESP_PORT = 4210
 class GripperDriver(Node):
     def __init__(self):
         super().__init__("send_command_to_hardware")
-        # self.connect_to_esp32()
+        self.connect_to_esp32()
         self.srv_arduino = self.create_service(GripperCmd, "gripper_cmd", self.send_command_to_esp_callback)
         self.get_logger().info("Gripper driver is ready")
+        self.closing_pos_dict = {
+            'p': "2750 1350",
+            'n': "2750 1350",
+            'b': "2690 1410",
+            'r': "2700 1400",
+            'q': "2650 1450",
+            'k': "2640 1460",
+        }
 
     def connect_to_esp32(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -23,17 +31,14 @@ class GripperDriver(Node):
 
     def send_command_to_esp_callback(self, request, response):
         response.success = True
-        time.sleep(2)
-        return response
         try:
             self.get_logger().info(f"Received command: {request.action}")
-            if request.action == "close":
-                drv_cmd = "SET_SERVO_POS_SYNC 2750 1350 100 100 10 10"
+            if request.action[:5] == "close":
+                drv_cmd = f"SET_SERVO_POS_SYNC {self.closing_pos_dict[request.action[6]]} 100 100 5 5"
             if request.action == "open":
-                drv_cmd = "SET_SERVO_POS_SYNC 2550 1550 100 100 10 10"
+                drv_cmd = "SET_SERVO_POS_SYNC 2530 1570 100 100 5 5"
             response_esp = self.send_command_to_esp_and_return_response(drv_cmd)
             self.get_logger().info(f"Response: {response_esp}")
-            time.sleep(2)
             response.success = True
         except Exception as e:
             self.get_logger().error(f"Error: {str(e)}")

@@ -11,12 +11,17 @@ from datetime import datetime
 import time
 import threading
 import numpy as np
-from computer_opponent.move_detection import MoveDetector, find_transform_from_corners
+from computer_opponent.move_detection import (
+    MoveDetector,
+    find_transform_from_corners,
+    find_transform,
+)
 import chess
 import torch
 from torchvision import transforms
 from PIL import Image as PILImage
 from computer_opponent.chess_cnn import ChessCNN
+import time
 
 
 class MoveDetectionNode(Node):
@@ -43,8 +48,9 @@ class MoveDetectionNode(Node):
         )
         self.move_pub = self.create_publisher(String, your_move_topic, 10)
         self.img_pub = self.create_publisher(Image, "/move_detected", 10)
+        self.img_pub2 = self.create_publisher(Image, "/image_cropped", 10)
 
-        self.img_size = (800, 800)
+        self.img_size = (100 * 8, 100 * 8)
         self.bridge = CvBridge()
         self.timer = None
         self.counter = 0
@@ -63,12 +69,6 @@ class MoveDetectionNode(Node):
         )
         self.model.eval()
 
-        self.labels = [".", "w", "b"]
-
-        # Output folder
-        # os.makedirs(self.output_dir, exist_ok=True)
-        # threading.Thread(target=self.read_input_loop, daemon=True).start()
-
     transform = transforms.Compose(
         [
             transforms.Resize((64, 64)),
@@ -80,13 +80,18 @@ class MoveDetectionNode(Node):
     def image_callback(self, msg):
         img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         self.curr_frame = self.crop_img(img)
+        msg = self.bridge.cv2_to_imgmsg(self.curr_frame, encoding="bgr8")
+        self.img_pub2.publish(msg)
 
     def timer_callback_(self):
         if not self.is_your_turn:
             return
         if self.curr_frame is None:
             return
+        start = time.time()
         self.detect_move()
+        end = time.time()
+        self.get_logger().info(f"Inference time: {(end-start)*1000:.2f} ms")
         # self.save_image(self.last_frame)
 
     def classify_square(self, img):
@@ -106,7 +111,7 @@ class MoveDetectionNode(Node):
             return None, None
         if self.last_frame is None:
             self.last_frame = img
-            print("last frame is none")
+            # self.get_logger().info("last frame is none")
             return None, None
 
         diff = cv2.absdiff(
@@ -119,20 +124,24 @@ class MoveDetectionNode(Node):
 
         self.last_frame = img
         if move_count >= move_discard_thresh:
-            print("too much movement")
+            # self.get_logger().info("too much movement")
 
             return None, None
 
         # Split into 64 squares
-        
+        self.save_image(img)
         msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
         self.img_pub.publish(msg)
         player_pieces = "w" if self.is_white else "b"
         squares = []
         board_str = "\n"
+        SQUARE_SIZE = 100
         for row in range(8):
             for col in range(8):
-                sq = img[row * 100 : (row + 1) * 100, col * 100 : (col + 1) * 100]
+                sq = img[
+                    row * SQUARE_SIZE : (row + 1) * SQUARE_SIZE,
+                    col * SQUARE_SIZE : (col + 1) * SQUARE_SIZE,
+                ]
                 square_pil = PILImage.fromarray(cv2.cvtColor(sq, cv2.COLOR_BGR2RGB))
                 label = self.classify_square(square_pil)
                 if label == player_pieces:
@@ -141,7 +150,7 @@ class MoveDetectionNode(Node):
                 if col == 7:
                     board_str += "\n"
 
-        # self.get_logger().info(f"Published board: {board_str}")
+        self.get_logger().info(f"Published board: {board_str}")
 
         if self.is_white:
             chess_color = chess.WHITE
@@ -160,9 +169,11 @@ class MoveDetectionNode(Node):
         )
 
         # self.get_logger().info(f"Published board: {white_squares}")
+        # self.get_logger().info(f"BOARD: \n{self.board}")
         moved_piece = list(set(white_squares) - set(squares))
         dest = list(set(squares) - set(white_squares))
         move_str = None
+        self.get_logger().info(f"MOVED: {moved_piece}, {dest}")
         # normal move, capture, enpassant
         if len(moved_piece) == 1 and len(dest) == 1:
             start_sq = moved_piece[0]
@@ -175,23 +186,34 @@ class MoveDetectionNode(Node):
                 start_rank = start_sq // 8
                 end_rank = end_sq // 8
                 if self.is_white and start_rank == 6 and end_rank == 7:
-                    move_str += "q" 
+                    move_str += "q"
                 elif not self.is_white and start_rank == 1 and end_rank == 0:
                     move_str += "q"
         if len(moved_piece) == 2 and len(dest) == 2:
-            castles_lookup = [(0, 4), (4, 7), (56, 60), (60, 63)]  # rook & king initial positions
-            dest_castles = [(2, 3), (6, 7), (58, 59), (61, 62)]    # rook & king final positions
+            castles_lookup = [
+                (0, 4),
+                (4, 7),
+                (56, 60),
+                (60, 63),
+            ]  # rook & king initial positions
+            dest_castles = [
+                (2, 3),
+                (5, 6),
+                (58, 59),
+                (61, 62),
+            ]  # rook & king final positions
             castles_notation = ["e1c1", "e1g1", "e8c8", "e8g8"]  # chess notation
-            
+
             moved_piece_sorted = tuple(sorted(moved_piece))
             dest_sorted = tuple(sorted(dest))
+            self.get_logger().info(
+                f"Two pieces moved: {moved_piece_sorted}, {dest_sorted}"
+            )
 
             if moved_piece_sorted in castles_lookup and dest_sorted in dest_castles:
                 idx = castles_lookup.index(moved_piece_sorted)
                 if idx == dest_castles.index(dest_sorted):
                     move_str = castles_notation[idx]
-        
-
 
         if not move_str:
             return None
@@ -210,6 +232,7 @@ class MoveDetectionNode(Node):
             msg = String()
             msg.data = move_str
             self.move_pub.publish(msg)
+            self.is_your_turn = False
 
     def square64_to_str(self, sqr64):
         col = int(sqr64 % 8)
@@ -226,16 +249,20 @@ class MoveDetectionNode(Node):
         #         "Cant change state when image is none, is camera running?"
         #     )
         if msg.data == "calibrate":
-            corners = [[502.0, 358.0], [246.0, 360.0], [505.0, 107.0], [249.0, 103.0]]
-            # self.move_detector.find_transform_from_corners(self.last_frame, corners)
+            # self.trsf_matrix = find_transform(self.curr_frame)
+            corners = [
+                [868.0, 619.0],
+                [315.0, 638.0],
+                [847.0, 61.0],
+                [292.0, 81.0],
+            ]
+            self.trsf_matrix = self.find_transform_from_corners(corners)
             self.state = "calibrated"
             self.get_logger().info("Calibrated")
         if msg.data == "start_game":
             # self.save_image(self.last_frame)
-            corners = [[977.0, 807.0], [398.0, 804.0], [960.0, 235.0], [398.0, 245.0]]
-            self.trsf_matrix = self.find_transform_from_corners(corners)
-            self.state = "calibrated"
-            self.get_logger().info("Calibrated")
+            # corners = [[977.0, 807.0], [398.0, 804.0], [960.0, 235.0], [398.0, 245.0]]
+            # self.trsf_matrix = self.find_transform_from_corners(corners)
             if self.trsf_matrix is None:
                 self.get_logger().error(
                     "Cant start game without transform, run calibrate first"
@@ -264,8 +291,8 @@ class MoveDetectionNode(Node):
     def crop_img(self, img):
         # ROI parameters (adjust as needed)
         x_offset = 500  # top-left corner X
-        y_offset = 150  # top-left corner Y
-        width = 1920 - 500 - 200  # width of crop
+        y_offset = 250  # top-left corner Y
+        width = 1920 - 500 - 400  # width of crop
         height = 1080 - 150  # height of crop
         roi = img[y_offset : y_offset + height, x_offset : x_offset + width]
         return roi

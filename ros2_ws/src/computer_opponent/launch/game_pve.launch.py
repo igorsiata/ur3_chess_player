@@ -30,14 +30,9 @@ def generate_launch_description():
         parameters=[
             {
                 "video_device": "/dev/video0",
-                "pixel_format": "mjpg",
-                "image_size": [1280, 720],
-                "framerate": 5,
-                # "contrast": 10,
-                # "sharpness": 5,
-                # "saturation": 50,
-                # "white_balance_automatic": False,
-                # "white_balance_temperature": 4500,
+                # "pixel_format": "mjpg",
+                "image_size": [1920, 1080],
+                "framerate": 30,
             }
         ],
     )
@@ -49,7 +44,6 @@ def generate_launch_description():
         parameters=[
             {
                 "is_white": True,
-                "skill_level": LaunchConfiguration("stockfish_skill_lvl"),
                 "start_position": LaunchConfiguration("start_position"),
             }
         ],
@@ -69,43 +63,23 @@ def generate_launch_description():
         ],
     )
 
-    move_proxy = Node(
-        package="computer_opponent",
-        executable="move_proxy",
-        name="move_proxy_node",
-    )
 
     # Only start node2 after node1 starts
-    delayed_robot_player = RegisterEventHandler(
-        OnProcessStart(
-            target_action=move_proxy,
-            on_start=[
-                TimerAction(
-                    period=0.5,
+    delayed_robot_player = TimerAction(
+                    period=2.0,
                     actions=[robot_player],  # wait 0.5s to ensure node1 initialized
                 )
-            ],
-        )
-    )
 
-    delayed_human_player = RegisterEventHandler(
-        OnProcessStart(
-            target_action=move_proxy,
-            on_start=[
-                TimerAction(
-                    period=0.5,
+    delayed_human_player = TimerAction(
+                    period=2.0,
                     actions=[human_player],  # wait 0.5s to ensure node1 initialized
                 )
-            ],
-        )
-    )
 
     return LaunchDescription(
         [
             human_is_white_arg,
             stockfish_skill_lvl_arg,
             start_position_arg,
-            move_proxy,
             camera_node,
             delayed_human_player,
             delayed_robot_player,

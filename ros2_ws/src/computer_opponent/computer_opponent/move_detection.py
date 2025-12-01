@@ -11,15 +11,15 @@ import chess
 
 
 def cannyHough(img, show_output=False):
-
+    
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
     blur = cv2.bilateralFilter(blur, 13, 100, 100)
 
-    edges = cv2.Canny(blur, 50, 150)
+    edges = cv2.Canny(blur, 50 ,100)
 
-    lines = cv2.HoughLines(edges, rho=1, theta=np.pi / 180, threshold=80)
+    lines = cv2.HoughLines(edges, rho=1, theta=np.pi/180, threshold=120)
 
     lines_list = []
     if lines is not None:
@@ -29,42 +29,37 @@ def cannyHough(img, show_output=False):
 
     if not show_output:
         return lines_list
+    
+    fig, ax = plt.subplots(1, 2, figsize=(10,5))
 
-    # fig, ax = plt.subplots(1, 2, figsize=(10,5))
-
-    # img_copy = img.copy()
-    # if lines is not None:
-    #     for line in lines:
-    #         rho, theta = line[0]
-    #         a = np.cos(theta)
-    #         b = np.sin(theta)
-    #         x0 = a * rho
-    #         y0 = b * rho
-    #         x1 = int(x0 + 2000 * (-b))
-    #         y1 = int(y0 + 2000 * (a))
-    #         x2 = int(x0 - 2000 * (-b))
-    #         y2 = int(y0 - 2000 * (a))
-    #         cv2.line(img_copy, (x1, y1), (x2, y2), (0, 255, 0), 3)
-    # ax[0].imshow(edges, 'gray')
-    # ax[0].axis('off')
-    # ax[0].set_title("Detekcja krawędzi")
-    # ax[1].imshow(cv2.cvtColor(img_copy, cv2.COLOR_BGR2RGB))
-    # ax[1].axis('off')
-    # ax[1].set_title("Znalezione linie")
-    plt.imshow(edges, "gray")
-    plt.axis("off")
+    img_copy = img.copy()
+    if lines is not None:
+        for line in lines:
+            rho, theta = line[0]
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            x1 = int(x0 + 2000 * (-b))
+            y1 = int(y0 + 2000 * (a))
+            x2 = int(x0 - 2000 * (-b))
+            y2 = int(y0 - 2000 * (a))
+            cv2.line(img_copy, (x1, y1), (x2, y2), (0, 255, 0), 3)
+    ax[0].imshow(edges, 'gray')
+    ax[0].axis('off')
+    ax[1].imshow(img_copy)
+    ax[1].axis('off')
     plt.show()
 
     return lines_list
 
-
 def averageLines(lines, img, show_output=False):
-    rho_tol = 20.0  # pixels
+    rho_tol = 20.0          # pixels
     theta_tol = np.deg2rad(30.0)  # radians
 
     if lines is None:
         return
-
+    
     clusters = []
     for line in lines:
         rho, theta = line
@@ -72,13 +67,13 @@ def averageLines(lines, img, show_output=False):
         for cl in clusters:
             r_avg, t_avg, cnt = cl
             dtheta = abs(theta - t_avg)
-            dtheta = min(dtheta, 2 * np.pi - dtheta)
+            dtheta = min(dtheta, 2*np.pi - dtheta)
             if abs(rho - r_avg) < rho_tol and dtheta < theta_tol:
                 new_cnt = cnt + 1
-                cl[0] = (r_avg * cnt + rho) / new_cnt
+                cl[0] = (r_avg*cnt + rho) / new_cnt
 
-                x = np.cos(t_avg) * cnt + np.cos(theta)
-                y = np.sin(t_avg) * cnt + np.sin(theta)
+                x = np.cos(t_avg)*cnt + np.cos(theta)
+                y = np.sin(t_avg)*cnt + np.sin(theta)
                 cl[1] = np.arctan2(y, x)
                 cl[2] = new_cnt
                 placed = True
@@ -106,27 +101,21 @@ def averageLines(lines, img, show_output=False):
         cv2.line(vis_avg, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
     # Show original detected rho/theta and averaged ones
+    
 
-    plt.figure(figsize=(8, 4))
-    if len(lines) > 0:
+    plt.figure(figsize=(8,4))
+    if len(lines)>0:
         rs, ts = zip(*lines)
-        plt.scatter(rs, ts, s=10, label="raw")
-    if len(avg_lines) > 0:
+        plt.scatter(rs, ts, s=10, label='raw')
+    if len(avg_lines)>0:
         ars, ats = zip(*avg_lines)
-        plt.scatter(ars, ats, c="cyan", s=80, marker="x", label="averaged")
-    plt.xlabel("rho")
-    plt.ylabel("theta (rad)")
-    plt.legend()
-    plt.title("Line clusters (rho,theta)")
+        plt.scatter(ars, ats, c='cyan', s=80, marker='x', label='averaged')
+    plt.xlabel('rho'); plt.ylabel('theta (rad)'); plt.legend(); plt.title('Line clusters (rho,theta)')
     plt.show()
 
-    # plt.figure(figsize=(6,6))
-    plt.imshow(cv2.cvtColor(vis_avg, cv2.COLOR_BGR2RGB))
-    plt.axis("off")
-    plt.show()
+    plt.figure(figsize=(6,6)); plt.imshow(cv2.cvtColor(vis_avg, cv2.COLOR_BGR2RGB)); plt.axis('off'); plt.title('Averaged Hough lines'); plt.show()
 
     return avg_lines
-
 
 def show_lines(img, lines):
     vis = img.copy()
@@ -143,12 +132,10 @@ def show_lines(img, lines):
     plt.imshow(vis)
     plt.show()
 
-
 def angle_diff(a, b):
     """Return minimal absolute difference between two angles in radians."""
     d = np.abs(a - b) % np.pi
     return min(d, np.pi - d)
-
 
 def intersections_from_rho_theta(rhos, thetas, deg=False, eps=1e-9):
     """
@@ -158,7 +145,7 @@ def intersections_from_rho_theta(rhos, thetas, deg=False, eps=1e-9):
     eps: threshold to consider two lines parallel (|denom| < eps)
     Returns: list of dicts: [{'pair': (i,j), 'x': x, 'y': y, 'parallel': bool}, ...]
     """
-    box_max = 800
+    box_max = 2000
     box_min = 0
     rhos = np.asarray(rhos, dtype=float)
     thetas = np.asarray(thetas, dtype=float)
@@ -167,49 +154,45 @@ def intersections_from_rho_theta(rhos, thetas, deg=False, eps=1e-9):
 
     results = []
     N = len(rhos)
-    for i, j in itertools.combinations(range(N), 2):
+    for i,j in itertools.combinations(range(N), 2):
         rho1, th1 = rhos[i], thetas[i]
         rho2, th2 = rhos[j], thetas[j]
         denom = math.sin(th2 - th1)  # sin(theta2-theta1)
         x = (rho1 * math.sin(th2) - rho2 * math.sin(th1)) / denom
         y = (-rho1 * math.cos(th2) + rho2 * math.cos(th1)) / denom
         if box_min <= x <= box_max and box_min <= y <= box_max:
-            results.append([x, y])
+            results.append([x , y])
     return results
-
 
 def x_intercept(line):
     rho, theta = line
     if np.cos(theta) != 0:
         return rho / np.cos(theta)  # x where y=0
     else:
-        return float("inf")  # vertical line
-
-
+        return float('inf')  # vertical line
+    
 def y_intercept(line):
     rho, theta = line
     if np.sin(theta) != 0:
         return rho / np.sin(theta)  # x where y=0
     else:
-        return float("inf")  # vertical line
-
+        return float('inf')  # vertical line
 
 def order_points(pts):
     # pts: array of 4 points [[x1,y1],[x2,y2],...]
     rect = np.zeros((4, 2), dtype="float32")
-
+    
     # sum of coordinates: top-left has smallest sum, bottom-right has largest sum
     s = pts.sum(axis=1)
     rect[0] = pts[np.argmin(s)]  # top-left
     rect[3] = pts[np.argmax(s)]  # bottom-right
-
+    
     # difference of coordinates: top-right has smallest diff, bottom-left has largest diff
     diff = np.diff(pts, axis=1)
     rect[1] = pts[np.argmin(diff)]  # top-right
     rect[2] = pts[np.argmax(diff)]  # bottom-left
-
+    
     return rect
-
 
 def findChessboard(lines, img, show_optput=False):
 
@@ -217,53 +200,56 @@ def findChessboard(lines, img, show_optput=False):
     v_lines = []
 
     theta_tol = np.deg2rad(10.0)
-    h_val = np.pi / 2
+    h_val = np.pi/2
     v_val = 0.0
     for line in lines:
         rho, theta = line
         h_diff = angle_diff(theta, h_val)
         v_diff = angle_diff(theta, v_val)
-        if h_diff < theta_tol:
+        if h_diff < v_diff:
             h_lines.append([rho, theta])
-        elif v_diff < theta_tol:
+        elif v_diff < h_diff:
             v_lines.append([rho, theta])
+    
 
     h_lines.sort(key=y_intercept)
     v_lines.sort(key=x_intercept)
 
     y_inter = [y_intercept(e) for e in h_lines]
     h_diffs = []
-    for i in range(len(y_inter) - 1):
-        h_diffs.append(y_inter[i + 1] - y_inter[i])
+    for i in range(len(y_inter)-1):
+        h_diffs.append(y_inter[i+1] - y_inter[i])
     h_median = np.median(h_diffs)
-
+    
     for i in range(len(h_diffs)):
         if h_diffs[i] > h_median - 10:
             h_min = h_lines[i]
             break
 
     for i in range(len(h_diffs)):
-        idx = len(h_diffs) - 1 - i
+        idx = len(h_diffs)-1-i
         if h_diffs[idx] > h_median - 10:
-            h_max = h_lines[idx + 1]
+            h_max = h_lines[idx+1]
             break
 
     x_inter = [x_intercept(e) for e in v_lines]
     v_diffs = []
-    for i in range(len(x_inter) - 1):
-        v_diffs.append(x_inter[i + 1] - x_inter[i])
+    for i in range(len(x_inter)-1):
+        v_diffs.append(x_inter[i+1] - x_inter[i])
     v_median = np.median(v_diffs)
 
+    tol = 5
     for i in range(len(v_diffs)):
-        if v_diffs[i] > v_median - 5:
+        if v_diffs[i] > v_median - tol:
             v_min = v_lines[i]
             break
 
     for i in range(len(v_diffs)):
-        idx = len(v_diffs) - 1 - i
-        if v_diffs[idx] > v_median - 5:
-            v_max = v_lines[idx + 1]
+        idx = len(v_diffs)-1-i
+        if v_diffs[idx] > v_median - tol:
+            v_max = v_lines[idx+1]
             break
+
 
     bounding_lines = [h_max, h_min, v_max, v_min]
     rhos = [e[0] for e in bounding_lines]
@@ -273,7 +259,8 @@ def findChessboard(lines, img, show_optput=False):
     if not show_optput:
         return corners
 
-    # Draw averaged lines on a copy
+
+     # Draw averaged lines on a copy
     if show_optput:
         vis_corners = img.copy()
         for rho, theta in bounding_lines:
@@ -287,27 +274,24 @@ def findChessboard(lines, img, show_optput=False):
             y2 = int(y0 - 2000 * (a))
             cv2.line(vis_corners, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
-        for x, y in corners:
+        for x,y in corners:
             cv2.circle(vis_corners, (int(x), int(y)), 8, (0, 0, 255), 6)
 
         plt.imshow(cv2.cvtColor(vis_corners, cv2.COLOR_BGR2RGB))
-        plt.axis("off")
         plt.show()
     return corners
-
-
+    
 def transform_image(img, corners, show_output=False):
     width, height = 800, 800
     corners = np.float32(corners)
     corners = order_points(corners)
-    pts2 = np.float32([[0, 0], [width, 0], [0, height], [width, height]])
+    pts2 = np.float32([[0,0], [width, 0], [0, height], [width, height]])
     matrix = cv2.getPerspectiveTransform(corners, pts2)
     result = cv2.warpPerspective(img, matrix, (800, 800))
     if show_output:
         plt.imshow(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
         plt.show()
     return matrix, result
-
 
 def divide_chessboard(img, show_output=False):
     # Number of cells
@@ -319,17 +303,23 @@ def divide_chessboard(img, show_output=False):
     img_vis = img.copy()
     for i in range(1, cols):
         x = i * cell_width
-        cv2.line(img_vis, (x, 0), (x, 800), (0, 255, 0), 4)
+        cv2.line(img_vis, (x, 0), (x, 800), (0,255, 0), 4)
 
     # Draw horizontal lines
     for i in range(1, rows):
         y = i * cell_height
-        cv2.line(img_vis, (0, y), (800, y), (0, 255, 0), 4)
+        cv2.line(img_vis, (0, y), (800, y), (0,255, 0), 4)
     if show_output:
         plt.imshow(cv2.cvtColor(img_vis, cv2.COLOR_BGR2RGB))
-        plt.axis("off")
         plt.show()
     return cv2.cvtColor(img_vis, cv2.COLOR_BGR2RGB)
+
+def find_transform(img):
+    lines = cannyHough(img, False)
+    avg_lines = averageLines(lines, img, False)
+    corners = findChessboard(avg_lines, img, False)
+    trsf_matrix, img_trsf = transform_image(img, corners, False)
+    return trsf_matrix
 
 def find_transform_from_corners(img, corners):
         return transform_image(img, corners, False)

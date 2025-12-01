@@ -57,7 +57,7 @@ def generate_launch_description():
         parameters=[
             {
                 "is_white": True,
-                "start_position": LaunchConfiguration("start_position"),
+                "start_position_fen": LaunchConfiguration("start_position"),
             }
         ],
     )
@@ -69,18 +69,18 @@ def generate_launch_description():
         parameters=[
             {
                 "is_white": False,
-                "start_position": LaunchConfiguration("start_position"),
+                "start_position_fen": LaunchConfiguration("start_position"),
             }
         ],
     )
 
     delayed_white_player = TimerAction(
-        period=2.0,
+        period=0.5,
         actions=[human_player_white],  # wait 0.5s to ensure node1 initialized
     )
 
     delayed_black_player = TimerAction(
-        period=2.0,
+        period=0.5,
         actions=[human_player_black],  # wait 0.5s to ensure node1 initialized
     )
 

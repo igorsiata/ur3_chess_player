@@ -84,3 +84,12 @@ Detekcja transformacji szachownicy:
 ### Gripper cmd service
 * open
 * close(piece)
+
+## Plan działania 30.11
+* Teoria - CNN DONE
+* Teoria inne algorytmy? (projekcja, znajdowanie szachownicy) DONE - NIE
+* Podrodzdział znajdowanie transformacji szachownicy HALF DONE
+* Podrozdział wykrywanie posunięć
+* Integracja systemu
+* Abstrakt
+* Zawartość pracy

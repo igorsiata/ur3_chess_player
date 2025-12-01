@@ -8,6 +8,15 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallb
 
 import chess
 import chess.engine
+from enum import IntEnum
+
+class MoveType(IntEnum):
+    REGULAR = 0
+    CAPTURE = 1
+    CASTLE = 2
+    ENPASSANT = 3
+    PROMOTION = 4
+    CAPTURE_PROMOTION = 5
 
 
 class StockfishNode(Node):
@@ -61,8 +70,6 @@ class StockfishNode(Node):
                 self.stockfish_make_move()
                 
             
-
-
     def enemy_move_callback_(self, msg):
         try:
             move = chess.Move.from_uci(msg.data)
@@ -119,20 +126,27 @@ class StockfishNode(Node):
 
     def make_move_on_board(self, move: chess.Move):
         move_uci = move.uci()
-
         request = MakeMove.Request()
         request.from_sqr = move_uci[:2]
         request.to_sqr = move_uci[2:4]
+
+        request.moved_piece = ord(self.board.piece_at(move.from_square).symbol().lower())
+        captured_piece = self.board.piece_at(move.from_square)
+        if captured_piece is not None:
+            request.captured_piece = ord(captured_piece.symbol().lower())
+
         if self.board.is_en_passant(move):
-            request.move_type = "enpassant"
+            request.move_type = MoveType.ENPASSANT
+        elif self.board.is_capture(move) and len(move_uci) == 5:
+            request.move_type = MoveType.CAPTURE_PROMOTION
         elif self.board.is_capture(move):
-            request.move_type = "capture"
+            request.move_type = MoveType.CAPTURE
         elif self.board.is_castling(move):
-            request.move_type = "castle"
+            request.move_type = MoveType.CASTLE
         elif len(move_uci) == 5:
-            request.move_type = "promotion"
+            request.move_type = MoveType.PROMOTION
         else:
-            request.move_type = "regular"
+            request.move_type = MoveType.REGULAR
 
         self.get_logger().info(f"moving arm: {move_uci}, type {request.move_type}")
         future = self.move_client_.call_async(request)

@@ -44,43 +44,11 @@ def generate_launch_description():
         ],
     )
 
-    move_proxy = Node(
-        package="computer_opponent",
-        executable="move_proxy",
-        name="move_proxy_node",
-    )
-
-    # Only start node2 after node1 starts
-    delayed_white_player = RegisterEventHandler(
-        OnProcessStart(
-            target_action=move_proxy,
-            on_start=[
-                TimerAction(
-                    period=0.5,
-                    actions=[white_player],  # wait 0.5s to ensure node1 initialized
-                )
-            ],
-        )
-    )
-
-    delayed_black_player = RegisterEventHandler(
-        OnProcessStart(
-            target_action=move_proxy,
-            on_start=[
-                TimerAction(
-                    period=0.5,
-                    actions=[black_player],  # wait 0.5s to ensure node1 initialized
-                )
-            ],
-        )
-    )
-
     return LaunchDescription(
         [
             stockfish_skill_lvl_arg,
             start_position_arg,
-            move_proxy,
-            delayed_black_player,
-            delayed_white_player,
+            black_player,
+            white_player,
         ]
     )

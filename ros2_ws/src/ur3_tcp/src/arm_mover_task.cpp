@@ -276,7 +276,7 @@ bool ArmMoverTask::moveWaypoit(const geometry_msgs::msg::Pose& waypoint) {
     return false;
   }
 
-  if (!task_.plan(3)) {
+  if (!task_.plan(5)) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
     std::ofstream log_file("/home/igorsiata/mtc_failure.txt");
     if (log_file.is_open()) {
@@ -323,7 +323,7 @@ bool ArmMoverTask::moveNamedPose(const std::string& pose) {
     return false;
   }
 
-  if (!task_.plan(3)) {
+  if (!task_.plan(5)) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
     std::ofstream log_file("/home/igorsiata/mtc_failure.txt");
     if (log_file.is_open()) {

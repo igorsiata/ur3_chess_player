@@ -7,3 +7,5 @@ __pycache__
 secrets.h
 vision_system/img
 temp_f
+test_temp.ipynb
+lichess_db_standard_rated_2015-01.pgn.zst

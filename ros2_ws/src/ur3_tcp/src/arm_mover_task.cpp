@@ -11,6 +11,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <thread>
 
+#include "ur3_tcp/msg/robot_move_status.hpp"
 #include "ur3_tcp/srv/gripper_cmd.hpp"
 #include "ur3_tcp/srv/make_move.hpp"
 #include "ur3_tcp/srv/move_joints.hpp"
@@ -79,10 +80,12 @@ class ArmMoverTask : public rclcpp::Node {
 
   int promotionCount_ = 0;
   const std::string extraQueenSquares_[2] = {"^6", "^5"};
+  std::string errorMessage_;
 
   rclcpp::CallbackGroup::SharedPtr gripper_cb_group_;
   rclcpp::Client<ur3_tcp::srv::GripperCmd>::SharedPtr gripper_cli;
   rclcpp::Service<ur3_tcp::srv::MakeMove>::SharedPtr makeMoveService_;
+  rclcpp::Publisher<ur3_tcp::msg::RobotMoveStatus>::SharedPtr robotMoveStatus_;
 };
 
 ArmMoverTask::ArmMoverTask(const rclcpp::NodeOptions& options)
@@ -99,6 +102,7 @@ ArmMoverTask::ArmMoverTask(const rclcpp::NodeOptions& options)
 
   gripper_cli = create_client<ur3_tcp::srv::GripperCmd>(
       "gripper_cmd", rmw_qos_profile_services_default, gripper_cb_group_);
+
   RCLCPP_INFO(get_logger(), "ArmMoverTask service ready.");
 }
 
@@ -106,33 +110,31 @@ void ArmMoverTask::makeMoveCallback(
     const std::shared_ptr<ur3_tcp::srv::MakeMove::Request> request,
     std::shared_ptr<ur3_tcp::srv::MakeMove::Response> response) {
   const MoveType moveType = static_cast<MoveType>(request->move_type);
+  bool success = true;
+
+  errorMessage_ = "";
+
   switch (moveType) {
     case MoveType::REGULAR: {
-      bool success = true;
       success &= makeRegularMove(request->from_sqr, request->to_sqr,
                                  request->moved_piece);
-      success &= moveNamedPose("idle");
-      response->success = success;
-      return;
+      break;
     }
     case MoveType::CAPTURE: {
-      bool success = true;
       success &= makeCapture(request->to_sqr, request->captured_piece);
+      if (!success) break;
       success &= makeRegularMove(request->from_sqr, request->to_sqr,
                                  request->moved_piece);
-      success &= moveNamedPose("idle");
-      response->success = success;
-      return;
+      break;
     }
     case MoveType::ENPASSANT: {
       const std::string capturedPieceSquare =
           std::string(1, request->to_sqr[0]) + request->from_sqr[1];
-      bool success = true;
+
       success &= makeCapture(capturedPieceSquare, 'p');
+      if (!success) break;
       success &= makeRegularMove(request->from_sqr, request->to_sqr,
                                  request->moved_piece);
-      success &= moveNamedPose("idle");
-      response->success = success;
       break;
     }
     case MoveType::CASTLE: {
@@ -154,31 +156,31 @@ void ArmMoverTask::makeMoveCallback(
         rookFromSquare = "a8";
         rookToSquare = "d8";
       }
-      bool success = true;
+
       success &= makeRegularMove(request->from_sqr, request->to_sqr, 'k');
+      if (!success) break;
       success &= makeRegularMove(rookFromSquare, rookToSquare, 'r');
-      success &= moveNamedPose("idle");
-      response->success = success;
       break;
     }
     case MoveType::PROMOTION: {
-      bool success = true;
       success &= makeCapture(request->from_sqr, request->moved_piece);
+      if (!success) break;
       success &= makePromotion(request->to_sqr, 'q');
-      success &= moveNamedPose("idle");
-      response->success = success;
-      return;
+      break;
     }
     case MoveType::CAPTURE_PROMOTION: {
-      bool success = true;
       success &= makeCapture(request->to_sqr, request->captured_piece);
+      if (!success) break;
       success &= makeCapture(request->from_sqr, request->moved_piece);
+      if (!success) break;
       success &= makePromotion(request->to_sqr, 'q');
-      success &= moveNamedPose("idle");
-      response->success = success;
-      return;
+      break;
     }
   }
+  success &= moveNamedPose("idle");
+  response->success = success;
+  response->message = errorMessage_;
+  return;
 }
 
 bool ArmMoverTask::makeCapture(const std::string& squareStr, char piece) {
@@ -187,8 +189,11 @@ bool ArmMoverTask::makeCapture(const std::string& squareStr, char piece) {
   bool success = true;
 
   success &= moveWaypoit(capturedPiecePose);
+  if (!success) return false;
   success &= sendGripperCmd(std::string("close_") + piece);
+  if (!success) return false;
   success &= moveNamedPose("out");
+  if (!success) return false;
   success &= sendGripperCmd("open");
   return success;
 }
@@ -200,8 +205,11 @@ bool ArmMoverTask::makeRegularMove(const std::string& fromSqr,
   bool success = true;
 
   success &= moveWaypoit(fromPose);
+  if (!success) return false;
   success &= sendGripperCmd(std::string("close_") + piece);
+  if (!success) return false;
   success &= moveWaypoit(toPose);
+  if (!success) return false;
   success &= sendGripperCmd("open");
   return success;
 }
@@ -216,24 +224,28 @@ bool ArmMoverTask::makePromotion(const std::string& toSqr, char piece = 'q') {
   bool success = true;
 
   success &= moveWaypoit(fromPose);
+  if (!success) return false;
   success &= sendGripperCmd(std::string("close_") + piece);
+  if (!success) return false;
   success &= moveWaypoit(toPose);
+  if (!success) return false;
   success &= sendGripperCmd("open");
   return success;
 }
 
 bool ArmMoverTask::sendGripperCmd(const std::string& command) {
-    auto request = std::make_shared<ur3_tcp::srv::GripperCmd::Request>();
-    request->action = command;
+  auto request = std::make_shared<ur3_tcp::srv::GripperCmd::Request>();
+  request->action = command;
 
-    auto future = gripper_cli->async_send_request(request);
-    if (future.wait_for(std::chrono::seconds(3)) != std::future_status::ready) {
-        RCLCPP_ERROR(this->get_logger(), "Gripper response timeout");
-        return false;
-    }
+  auto future = gripper_cli->async_send_request(request);
+  if (future.wait_for(std::chrono::seconds(3)) != std::future_status::ready) {
+    errorMessage_ = "ERROR: sending command to gripper failed: " + command;
+    RCLCPP_ERROR(this->get_logger(), "Gripper response timeout");
+    return false;
+  }
 
-    auto resp = future.get();
-    return resp->success;
+  auto resp = future.get();
+  return resp->success;
 }
 
 geometry_msgs::msg::Pose ArmMoverTask::squareToPose(
@@ -278,20 +290,9 @@ bool ArmMoverTask::moveWaypoit(const geometry_msgs::msg::Pose& waypoint) {
 
   if (!task_.plan(7)) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
-    std::ofstream log_file("/home/igorsiata/mtc_failure.txt");
-    if (log_file.is_open()) {
-      log_file << "=== MTC Task Planning Failure ===" << std::endl;
-      log_file << "Timestamp: " << std::time(nullptr) << std::endl;
-      task_.explainFailure(log_file);
-      log_file.close();
-      RCLCPP_INFO(
-          get_logger(),
-          "Failure explanation written to /home/igorsiata/mtc_failure.txt");
-      return false;
-    } else {
-      RCLCPP_ERROR(get_logger(), "Could not open log file");
-      return false;
-    }
+    this->errorMessage_ =
+        "ERROR: moveWaypoint: x=" + std::to_string(waypoint.position.x) +
+        ", y=" + std::to_string(waypoint.position.x) + " planning failed";
   }
 
   auto& solutions = task_.solutions();
@@ -306,6 +307,9 @@ bool ArmMoverTask::moveWaypoit(const geometry_msgs::msg::Pose& waypoint) {
   auto result = task_.execute(*best_solution);
   if (result.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task execution failed");
+    this->errorMessage_ =
+        "ERROR: moveWaypoint: x=" + std::to_string(waypoint.position.x) +
+        ", y=" + std::to_string(waypoint.position.x) + " execution failed";
     return false;
   }
   is_home_position_ = false;
@@ -325,20 +329,7 @@ bool ArmMoverTask::moveNamedPose(const std::string& pose) {
 
   if (!task_.plan(7)) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
-    std::ofstream log_file("/home/igorsiata/mtc_failure.txt");
-    if (log_file.is_open()) {
-      log_file << "=== MTC Task Planning Failure ===" << std::endl;
-      log_file << "Timestamp: " << std::time(nullptr) << std::endl;
-      task_.explainFailure(log_file);
-      log_file.close();
-      RCLCPP_INFO(
-          get_logger(),
-          "Failure explanation written to /home/igorsiata/mtc_failure.txt");
-      return false;
-    } else {
-      RCLCPP_ERROR(get_logger(), "Could not open log file");
-      return false;
-    }
+    this->errorMessage_ = "ERROR: moveNamedPose: " + pose + " planning failed";
   }
 
   auto& solutions = task_.solutions();
@@ -353,6 +344,7 @@ bool ArmMoverTask::moveNamedPose(const std::string& pose) {
   auto result = task_.execute(*best_solution);
   if (result.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task execution failed");
+    this->errorMessage_ = "ERROR: moveNamedPose: " + pose + " execution failed";
     return false;
   }
   return true;

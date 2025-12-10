@@ -4,6 +4,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Pose, Point, Quaternion
 from tf_transformations import quaternion_from_euler
 from ur3_tcp.srv import MakeMove, GripperCmd
+from ur3_tcp.msg import RobotMoveStatus
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 
 import chess
@@ -45,6 +46,9 @@ class StockfishNode(Node):
         )
         self.move_publisher = self.create_publisher(
             String, your_move_topic, 10
+        )
+        self.robot_move_status_publisher = self.create_publisher(
+            RobotMoveStatus, "robot_move_status", 10
         )
 
         self.configure_engine()
@@ -156,6 +160,12 @@ class StockfishNode(Node):
             self.get_logger().info(f"Waypoint executed successfully")
         else:
             self.get_logger().error(f"Failed to execute waypoint : {response.message}")
+
+        status_msg = RobotMoveStatus()
+        status_msg.move = move_uci
+        status_msg.success = response.success
+        status_msg.error_message = response.error_message
+        self.robot_move_status_publisher.publish(status_msg)
 
 
 def main(args=None):

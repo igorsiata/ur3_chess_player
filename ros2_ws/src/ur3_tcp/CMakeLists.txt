@@ -40,6 +40,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/MoveJoints.srv"
   "srv/MakeMove.srv"
   "srv/GripperCmd.srv"
+  "msg/MoveDetectionStatus.msg"
+  "msg/RobotMoveStatus.msg"
   "action/MovePiece.action"
   DEPENDENCIES geometry_msgs
 )

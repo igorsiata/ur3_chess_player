@@ -36,6 +36,7 @@ setup(
             'test_client = computer_opponent.test_client:main',
             'move_proxy = computer_opponent.move_proxy:main',
             'human_move_detection = computer_opponent.human_move_detection:main',
+            'ui_tkinter = computer_opponent.ui_tkinter:main',
         ],
     },
 )

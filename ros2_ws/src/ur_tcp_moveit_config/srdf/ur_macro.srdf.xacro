@@ -27,11 +27,11 @@
         <joint name="wrist_3_joint" value="0"/>
     </group_state>
     <group_state name="idle" group="ur_manipulator">
-        <joint name="elbow_joint" value="0.79"/>
-        <joint name="shoulder_lift_joint" value="-1.57"/>
+        <joint name="elbow_joint" value="0"/>
+        <joint name="shoulder_lift_joint" value="-1.4927"/>
         <joint name="shoulder_pan_joint" value="1.57"/>
-        <joint name="wrist_1_joint" value="-1.57"/>
-        <joint name="wrist_2_joint" value="-1.57"/>
+        <joint name="wrist_1_joint" value="-1.5621"/>
+        <joint name="wrist_2_joint" value="0"/>
         <joint name="wrist_3_joint" value="0"/>
     </group_state>
     <group_state name="out" group="ur_manipulator">
@@ -39,7 +39,7 @@
         <joint name="shoulder_lift_joint" value="-1.5"/>
         <joint name="shoulder_pan_joint" value="2.27"/>
         <joint name="wrist_1_joint" value="-1.57"/>
-        <joint name="wrist_2_joint" value="-1.5 7"/>
+        <joint name="wrist_2_joint" value="-1.57"/>
         <joint name="wrist_3_joint" value="0.7"/>
     </group_state>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->

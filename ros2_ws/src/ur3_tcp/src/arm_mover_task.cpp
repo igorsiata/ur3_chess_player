@@ -244,7 +244,7 @@ geometry_msgs::msg::Pose ArmMoverTask::squareToPose(
   const float boardHeight = 0.024;
   const float gripperToTool0Distance = 0.165;
   const float PieceGrippingDistance = 0.025;
-  const float verticalMoveOffset = placeDown ? 0.105 : 0.1;
+  const float verticalMoveOffset = placeDown ? 0.102 : 0.1;
 
   const int row = squareStr[1] - '1';
   const int col = squareStr[0] - 'a';
@@ -276,7 +276,7 @@ bool ArmMoverTask::moveWaypoit(const geometry_msgs::msg::Pose& waypoint) {
     return false;
   }
 
-  if (!task_.plan(5)) {
+  if (!task_.plan(7)) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
     std::ofstream log_file("/home/igorsiata/mtc_failure.txt");
     if (log_file.is_open()) {
@@ -323,7 +323,7 @@ bool ArmMoverTask::moveNamedPose(const std::string& pose) {
     return false;
   }
 
-  if (!task_.plan(5)) {
+  if (!task_.plan(7)) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
     std::ofstream log_file("/home/igorsiata/mtc_failure.txt");
     if (log_file.is_open()) {
@@ -497,7 +497,7 @@ mtc::Task ArmMoverTask::createWaypointTask(
     // Compute IK
     auto wrapper = std::make_unique<mtc::stages::ComputeIK>("place pose IK",
                                                             std::move(move_to));
-    wrapper->setMaxIKSolutions(2);
+    wrapper->setMaxIKSolutions(7);
     wrapper->setMinSolutionDistance(0.001);
     wrapper->setIKFrame(hand_frame);
     wrapper->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});

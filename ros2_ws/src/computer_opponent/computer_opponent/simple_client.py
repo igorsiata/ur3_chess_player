@@ -98,25 +98,28 @@ class ArmMoverClient(Node):
                 )
 
     def send_moves(self):
-        moves = ["e2e4", "h1h8", "e8c8", "b4c3", "a2a1", "e7f8"]
-        move_types = [
-            MoveType.REGULAR,
-            MoveType.CAPTURE,
-            MoveType.CASTLE,
-            MoveType.ENPASSANT,
-            MoveType.PROMOTION,
-            MoveType.CAPTURE_PROMOTION
+        moves1 = [
+            ["a1d1", MoveType.REGULAR, "p", "x"],
+            ["d1h1", MoveType.REGULAR, "p", "x"],
+            ["a3d3", MoveType.REGULAR, "b", "x"],
+            ["d3h3", MoveType.REGULAR, "b", "x"],
         ]
-        moved_pieces = ["q", "r", "k", "p", "p", "p"]
-        captured_pieces = ["x", "b", "x", "p", "p", "n"]
-        # moves = ["h7h8"]
-        # move_types = [
-        #     MoveType.REGULAR,
 
-        # ]
-        # moved_pieces = ["p"]
-        # captured_pieces = ["p"]
-        for m, mt, p, cp in zip(moves, move_types, moved_pieces, captured_pieces):
+        moves2 = [
+            ["a2a1", MoveType.PROMOTION, "p", "x"],
+            ["d2e1", MoveType.CAPTURE_PROMOTION, "p", "r"],
+        ]
+
+        moves3 = [
+            ["a2a1", MoveType.PROMOTION, "p", "x"],
+            ["d2e1", MoveType.CAPTURE_PROMOTION, "p", "r"],
+            ["e8c8", MoveType.CASTLE, "k", "x"],
+            ["h1d5", MoveType.CAPTURE, "b", "r"],
+            ["g4h3", MoveType.ENPASSANT, "p", "p"],
+            ["h7f6", MoveType.REGULAR, "k", "x"],
+        ]
+
+        for m, mt, p, cp in moves3:
             self.get_logger().info(f"Sending move: {mt}, {m}")
 
             self.req_move.from_sqr = m[:2]

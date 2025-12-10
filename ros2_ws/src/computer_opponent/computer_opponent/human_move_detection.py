@@ -11,11 +11,8 @@ from datetime import datetime
 import time
 import threading
 import numpy as np
-from computer_opponent.move_detection import (
-    MoveDetector,
-    find_transform_from_corners,
-    find_transform,
-)
+
+from computer_opponent.chessboard_detection import find_chessbaord_transform
 import chess
 import torch
 from torchvision import transforms
@@ -49,8 +46,9 @@ class MoveDetectionNode(Node):
         self.move_pub = self.create_publisher(String, your_move_topic, 10)
         self.img_pub = self.create_publisher(Image, "/move_detected", 10)
         self.img_pub2 = self.create_publisher(Image, "/image_cropped", 10)
-
-        self.img_size = (100 * 8, 100 * 8)
+        
+        self.SQUARE_SIZE = 64
+        self.img_size = (self.SQUARE_SIZE * 8, self.SQUARE_SIZE * 8)
         self.bridge = CvBridge()
         self.timer = None
         self.counter = 0
@@ -63,11 +61,12 @@ class MoveDetectionNode(Node):
         self.model = ChessCNN().to(self.DEVICE)
         self.model.load_state_dict(
             torch.load(
-                "/home/igorsiata/ur3_chess_player/vision_system/model_weights.pth",
+                "/home/igorsiata/ur3_chess_player/vision_system/model_weights_3.pth",
                 map_location=self.DEVICE,
             )
         )
         self.model.eval()
+        self.get_logger().info("MoveDetectionNode ready!")
 
     transform = transforms.Compose(
         [
@@ -79,7 +78,7 @@ class MoveDetectionNode(Node):
 
     def image_callback(self, msg):
         img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        self.curr_frame = self.crop_img(img)
+        self.curr_frame = img
         msg = self.bridge.cv2_to_imgmsg(self.curr_frame, encoding="bgr8")
         self.img_pub2.publish(msg)
 
@@ -135,12 +134,11 @@ class MoveDetectionNode(Node):
         player_pieces = "w" if self.is_white else "b"
         squares = []
         board_str = "\n"
-        SQUARE_SIZE = 100
         for row in range(8):
             for col in range(8):
                 sq = img[
-                    row * SQUARE_SIZE : (row + 1) * SQUARE_SIZE,
-                    col * SQUARE_SIZE : (col + 1) * SQUARE_SIZE,
+                    row * self.SQUARE_SIZE : (row + 1) * self.SQUARE_SIZE,
+                    col * self.SQUARE_SIZE : (col + 1) * self.SQUARE_SIZE,
                 ]
                 square_pil = PILImage.fromarray(cv2.cvtColor(sq, cv2.COLOR_BGR2RGB))
                 label = self.classify_square(square_pil)
@@ -250,16 +248,23 @@ class MoveDetectionNode(Node):
         #     )
         if msg.data == "calibrate":
             # self.trsf_matrix = find_transform(self.curr_frame)
-            corners = [
-                [868.0, 619.0],
-                [315.0, 638.0],
-                [847.0, 61.0],
-                [292.0, 81.0],
-            ]
-            self.trsf_matrix = self.find_transform_from_corners(corners)
+            # corners = [
+            #     [868.0, 619.0],
+            #     [315.0, 638.0],
+            #     [847.0, 61.0],
+            #     [292.0, 81.0],
+            # ]
+            self.trsf_matrix = find_chessbaord_transform(self.curr_frame, size=self.img_size)
+            if self.trsf_matrix is None:
+                self.get_logger().error("Error, calibration not successfull")
+                return
+            
             self.state = "calibrated"
             self.get_logger().info("Calibrated")
         if msg.data == "start_game":
+            if self.trsf_matrix is None:
+                self.get_logger().error("Error, camera not calibrated")
+                return
             # self.save_image(self.last_frame)
             # corners = [[977.0, 807.0], [398.0, 804.0], [960.0, 235.0], [398.0, 245.0]]
             # self.trsf_matrix = self.find_transform_from_corners(corners)

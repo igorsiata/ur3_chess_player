@@ -34,9 +34,9 @@ class GripperDriver(Node):
         try:
             self.get_logger().info(f"Received command: {request.action}")
             if request.action[:5] == "close":
-                drv_cmd = f"SET_SERVO_POS_SYNC {self.closing_pos_dict[request.action[6]]} 100 100 5 5"
+                drv_cmd = f"SET_SERVO_POS_SYNC {self.closing_pos_dict[request.action[6]]} 800 800 20 20"
             if request.action == "open":
-                drv_cmd = "SET_SERVO_POS_SYNC 2530 1570 100 100 5 5"
+                drv_cmd = "SET_SERVO_POS_SYNC 2530 1570 800 800 20 20"
             response_esp = self.send_command_to_esp_and_return_response(drv_cmd)
             self.get_logger().info(f"Response: {response_esp}")
             response.success = True

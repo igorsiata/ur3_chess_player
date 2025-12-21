@@ -177,6 +177,8 @@ void ArmMoverTask::makeMoveCallback(
       break;
     }
   }
+  if (!success)
+    sendGripperCmd("open");
   success &= moveNamedPose("idle");
   response->success = success;
   response->message = errorMessage_;
@@ -255,7 +257,7 @@ geometry_msgs::msg::Pose ArmMoverTask::squareToPose(
 
   const float boardHeight = 0.024;
   const float gripperToTool0Distance = 0.165;
-  const float PieceGrippingDistance = 0.025;
+  const float PieceGrippingDistance = 0.023;
   const float verticalMoveOffset = placeDown ? 0.102 : 0.1;
 
   const int row = squareStr[1] - '1';
@@ -287,12 +289,18 @@ bool ArmMoverTask::moveWaypoit(const geometry_msgs::msg::Pose& waypoint) {
     RCLCPP_ERROR_STREAM(get_logger(), e);
     return false;
   }
-
-  if (!task_.plan(7)) {
+  int iter = 0;
+  while (iter < 10){
+    if (task_.plan(10))
+      break;
+    iter++;
+  }
+  if (iter == 10) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
     this->errorMessage_ =
         "ERROR: moveWaypoint: x=" + std::to_string(waypoint.position.x) +
         ", y=" + std::to_string(waypoint.position.x) + " planning failed";
+    return false;
   }
 
   auto& solutions = task_.solutions();
@@ -326,10 +334,16 @@ bool ArmMoverTask::moveNamedPose(const std::string& pose) {
     RCLCPP_ERROR_STREAM(get_logger(), e);
     return false;
   }
-
-  if (!task_.plan(7)) {
+  int iter = 0;
+  while (iter < 10){
+    if (task_.plan(10))
+      break;
+    iter++;
+  }
+  if (iter == 10) {
     RCLCPP_ERROR_STREAM(get_logger(), "Task planning failed");
     this->errorMessage_ = "ERROR: moveNamedPose: " + pose + " planning failed";
+    return false;
   }
 
   auto& solutions = task_.solutions();

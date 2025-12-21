@@ -14,7 +14,7 @@ def generate_launch_description():
         description="Game starting position",
     )
     stockfish_skill_lvl_arg = DeclareLaunchArgument(
-        "stockfish_skill_lvl", default_value="5", description="Level of stockfish"
+        "stockfish_skill_lvl", default_value="1", description="Level of stockfish"
     )
     human_is_white_arg = DeclareLaunchArgument(
         "human_is_white",

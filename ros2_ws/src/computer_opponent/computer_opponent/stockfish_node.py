@@ -47,6 +47,9 @@ class StockfishNode(Node):
         self.move_publisher = self.create_publisher(
             String, your_move_topic, 10
         )
+        self.result_publisher = self.create_publisher(
+            String, "game_result", 10
+        )
         self.robot_move_status_publisher = self.create_publisher(
             RobotMoveStatus, "robot_move_status", 10
         )
@@ -87,25 +90,24 @@ class StockfishNode(Node):
         else:
             self.get_logger().info("Received legal move")
 
+        self.publish_game_status()
         self.board.push(move)
         self.stockfish_make_move()
-        self.print_game_status()
+        self.publish_game_status()
 
-    def print_game_status(self):
-        if self.board.is_checkmate():
-            self.get_logger().info("Game over: Checkmate!")
-        elif self.board.is_stalemate():
-            self.get_logger().info("Game over: Stalemate!")
-        elif self.board.is_insufficient_material():
-            self.get_logger().info("Game over: Draw by insufficient material!")
-        elif self.board.is_fivefold_repetition() or self.board.is_seventyfive_moves():
-            self.get_logger().info("Game over: Draw by repetition/75-move rule!")
-        elif self.board.is_game_over():
-            self.get_logger().info("Game over: Other reason!")
-        else:
-            self.get_logger().info("Game still in progress.")
-            
-        self.get_logger().info(f"BOARD:\n{self.board}")
+    def publish_game_status(self):
+        if not self.board.is_game_over():
+            return
+        result = self.board.result()
+        msg = String()
+        if result == "1-0":
+            msg.data = "white_won"
+        elif result == "0-1":
+            msg.data = "black_won"
+        elif result == "1/2-1/2,":
+            msg.data = "draw"
+
+        self.result_publisher.publish(msg)
 
     def stockfish_make_move(self):
         if self.board.is_game_over():
@@ -135,7 +137,7 @@ class StockfishNode(Node):
         request.to_sqr = move_uci[2:4]
 
         request.moved_piece = ord(self.board.piece_at(move.from_square).symbol().lower())
-        captured_piece = self.board.piece_at(move.from_square)
+        captured_piece = self.board.piece_at(move.to_square)
         if captured_piece is not None:
             request.captured_piece = ord(captured_piece.symbol().lower())
 
@@ -164,7 +166,7 @@ class StockfishNode(Node):
         status_msg = RobotMoveStatus()
         status_msg.move = move_uci
         status_msg.success = response.success
-        status_msg.error_message = response.error_message
+        status_msg.error_message = response.message
         self.robot_move_status_publisher.publish(status_msg)
 
 

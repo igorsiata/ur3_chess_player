@@ -18,6 +18,7 @@ import torch
 from torchvision import transforms
 from PIL import Image as PILImage
 from computer_opponent.chess_cnn import ChessCNN
+from ur3_tcp.msg import MoveDetectionStatus
 import time
 
 
@@ -43,6 +44,7 @@ class MoveDetectionNode(Node):
         self.move_sub = self.create_subscription(
             String, enemy_move_topic, self.update_board_callback_, 10
         )
+        self.detection_status_pub = self.create_publisher(MoveDetectionStatus, "/move_detection_status", 10)
         self.move_pub = self.create_publisher(String, your_move_topic, 10)
         self.img_pub = self.create_publisher(Image, "/move_detected", 10)
         self.img_pub2 = self.create_publisher(Image, "/image_cropped", 10)
@@ -124,10 +126,10 @@ class MoveDetectionNode(Node):
         self.last_frame = img
         if move_count >= move_discard_thresh:
             # self.get_logger().info("too much movement")
-
             return None, None
 
         # Split into 64 squares
+        status_msg = MoveDetectionStatus()
         self.save_image(img)
         msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
         self.img_pub.publish(msg)
@@ -148,7 +150,7 @@ class MoveDetectionNode(Node):
                 if col == 7:
                     board_str += "\n"
 
-        self.get_logger().info(f"Published board: {board_str}")
+        # self.get_logger().info(f"Published board: {board_str}")
 
         if self.is_white:
             chess_color = chess.WHITE
@@ -171,7 +173,8 @@ class MoveDetectionNode(Node):
         moved_piece = list(set(white_squares) - set(squares))
         dest = list(set(squares) - set(white_squares))
         move_str = None
-        self.get_logger().info(f"MOVED: {moved_piece}, {dest}")
+        status_msg.changed_squares = [self.square64_to_str(s) for s in moved_piece + dest]
+        status_msg.legal = False
         # normal move, capture, enpassant
         if len(moved_piece) == 1 and len(dest) == 1:
             start_sq = moved_piece[0]
@@ -214,19 +217,26 @@ class MoveDetectionNode(Node):
                     move_str = castles_notation[idx]
 
         if not move_str:
+            self.detection_status_pub.publish(status_msg)
             return None
         self.get_logger().info(f"Piece moved {move_str}")
         try:
             move = chess.Move.from_uci(move_str)
         except ValueError:
             self.get_logger().info("Received not valid move format")
+            self.detection_status_pub.publish(status_msg)
             return None
         if move not in self.board.legal_moves:
             self.get_logger().info("Received illegal move")
+            self.detection_status_pub.publish(status_msg)
         else:
             self.get_logger().info("Received legal move")
             self.board.push(move)
             self.get_logger().info(f"BOARD: \n{self.board}")
+
+            status_msg.legal = True
+            status_msg.move = move_str
+            self.detection_status_pub.publish(status_msg)
             msg = String()
             msg.data = move_str
             self.move_pub.publish(msg)
@@ -247,27 +257,20 @@ class MoveDetectionNode(Node):
         #         "Cant change state when image is none, is camera running?"
         #     )
         if msg.data == "calibrate":
-            # self.trsf_matrix = find_transform(self.curr_frame)
-            # corners = [
-            #     [868.0, 619.0],
-            #     [315.0, 638.0],
-            #     [847.0, 61.0],
-            #     [292.0, 81.0],
-            # ]
             self.trsf_matrix = find_chessbaord_transform(self.curr_frame, size=self.img_size)
             if self.trsf_matrix is None:
                 self.get_logger().error("Error, calibration not successfull")
                 return
-            
+            msg_status = MoveDetectionStatus()
+            msg_status.legal = True
+            msg_status.move = "calibrated"
+            self.detection_status_pub.publish(msg_status)
             self.state = "calibrated"
             self.get_logger().info("Calibrated")
         if msg.data == "start_game":
             if self.trsf_matrix is None:
                 self.get_logger().error("Error, camera not calibrated")
                 return
-            # self.save_image(self.last_frame)
-            # corners = [[977.0, 807.0], [398.0, 804.0], [960.0, 235.0], [398.0, 245.0]]
-            # self.trsf_matrix = self.find_transform_from_corners(corners)
             if self.trsf_matrix is None:
                 self.get_logger().error(
                     "Cant start game without transform, run calibrate first"

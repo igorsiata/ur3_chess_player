@@ -28,8 +28,8 @@ class MoveDisplayGUI(tk.Tk):
         self.last_black_move = ""
 
         # Status variables for the new sub-windows
-        self.detection_status_var = tk.StringVar(value="Waiting for Turn...")
-        self.detection_detail_var = tk.StringVar(value="qqqq")
+        self.detection_status_var = tk.StringVar(value="Szachownica nie wykryta")
+        self.detection_detail_var = tk.StringVar(value="")
         self.robot_status_indicator_var = tk.StringVar(value="GOTOWY")
         self.robot_status_detail_var = tk.StringVar(value="")
 
@@ -108,6 +108,28 @@ class MoveDisplayGUI(tk.Tk):
         )
         self.robot_detail_label.grid(row=1, column=0, sticky="w")
 
+        # 4. Control Buttons (Row 3)
+        button_frame = ttk.Frame(main_frame, padding="5")
+        button_frame.grid(row=3, column=0, sticky="ew", padx=5, pady=10)
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
+
+        # Calibrate Button
+        self.calibrate_button = ttk.Button(
+            button_frame,
+            text="Wykryj szachownicę",
+            command=lambda: self.publish_state_command("calibrate") # Command to call
+        )
+        self.calibrate_button.grid(row=0, column=0, sticky="ew", padx=5)
+
+        # Start Game Button
+        self.start_game_button = ttk.Button(
+            button_frame,
+            text="Rozpocznij grę",
+            command=lambda: self.publish_state_command("start_game") # Command to call
+        )
+        self.start_game_button.grid(row=0, column=1, sticky="ew", padx=5)
+
         # ----------------------------------------------------
         # COLUMN 1: Side Panel - Scrollable History Log
         # ----------------------------------------------------
@@ -171,8 +193,6 @@ class MoveDisplayGUI(tk.Tk):
         
         self.node.get_logger().info(f'GUI updated. New turn: {self.current_turn}. Last move: {move}')
 
-   
-
     def _log_move(self, player, move):
         """Appends the move to the scrollable history log."""
         
@@ -197,7 +217,11 @@ class MoveDisplayGUI(tk.Tk):
 
     def update_move_detection_info(self, msg):
         # 1. Determine Status, Color, and Detail Text
-        if msg.legal:
+        if msg.move == "calibrated":
+            status_text = "PRZETWARZANIE"
+            status_color = "black"
+            detail_text = "Brak ruchu"
+        elif msg.legal:
             status_text = "WYKRYTO"
             status_color = "green"
             detail_text = f"Ruch: {msg.move}"
@@ -247,6 +271,36 @@ class MoveDisplayGUI(tk.Tk):
         """Safely updates GUI after a /black_move received."""
         self._update_display_and_toggle_turn("BLACK", msg)
 
+    def update_game_result(self, msg):
+        result = msg.data
+        
+        if result == "black_won":
+            res_string = "Przegrana"
+        elif result == "white_won":
+            res_string = "Wygrana"
+        elif result == "draw":
+            res_string = "Remis"
+        else:
+            return
+        
+        self.turn_var.set(res_string)
+        self.turn_label.config(background='light gray', foreground='black')
+        # self.turn_label.master.config(background=color) # This works if master is tk.Frame
+        self.config(background='light gray') 
+
+    def publish_state_command(self, command_string):
+        """Publishes the command string to the set_state topic."""
+        
+        if self.node is None or self.node.set_state_publisher_ is None:
+            print("ERROR: ROS 2 node or publisher not initialized!")
+            return
+
+        msg = String()
+        msg.data = command_string
+        
+        self.node.set_state_publisher_.publish(msg)
+        self.node.get_logger().info(f"Published State Command: {command_string}")
+
     def on_closing(self):
         """Clean up and exit when the window is closed."""
         self.node.get_logger().info("GUI closed. Shutting down ROS 2 node.")
@@ -261,6 +315,7 @@ class MoveListenerNode(Node):
     def __init__(self, gui):
         super().__init__('move_listener_node')
         self.gui = gui # Reference to the Tkinter GUI
+        self.set_state_publisher_ = None
 
         # Subscription for White Moves
         self.subscription_white = self.create_subscription(
@@ -295,6 +350,24 @@ class MoveListenerNode(Node):
             10
         )
         self.get_logger().info('Subscribed to /robot_move_status')
+
+
+        self.subscription_black = self.create_subscription(
+            String,
+            '/game_result',
+            self.game_result_callback,
+            10
+        )
+
+    def initialize_publishers(self):
+        """Creates the state publisher once the GUI is ready."""
+        if self.set_state_publisher_ is None:
+            self.set_state_publisher_ = self.create_publisher(
+                String,
+                '/set_state',
+                10
+            )
+            self.get_logger().info('Initialized publisher for /set_state')
         
     def white_move_callback(self, msg):
         """Callback for /white_move topic."""
@@ -320,6 +393,11 @@ class MoveListenerNode(Node):
         # Use Tkinter's after() to safely update the GUI from the ROS 2 thread
         self.gui.after(0, self.gui.update_move_detection_info, msg)
 
+    def game_result_callback(self, msg):
+        """Callback for /black_move topic."""
+        # Use Tkinter's after() to safely update the GUI from the ROS 2 thread
+        self.gui.after(0, self.gui.update_game_result, msg)
+
 # --- 3. Main Execution Functions ---
 
 def ros_spin_thread(node):
@@ -343,7 +421,7 @@ def main(args=None):
     # 2. Initialize ROS 2 Node
     move_listener_node = MoveListenerNode(gui)
     gui.node = move_listener_node # Set the node reference in the GUI
-
+    move_listener_node.initialize_publishers()
     # 3. Run ROS 2 Spinning in a separate Thread
     # Tkinter must run in the main thread, so the ROS 2 node is moved to a background thread.
     ros_thread = threading.Thread(target=ros_spin_thread, args=(move_listener_node,), daemon=True)

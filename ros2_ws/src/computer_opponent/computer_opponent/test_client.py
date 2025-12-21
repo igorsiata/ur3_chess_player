@@ -10,16 +10,16 @@ import time
 class TestClient(Node):
     def __init__(self):
         super().__init__('arm_mover_client')
-        # self.cli = self.create_client(GripperCmd, 'gripper_cmd')
-        # while not self.cli.wait_for_service(timeout_sec=1.0):
-        #     self.get_logger().info('Service not available, waiting...')
-        # self.req = GripperCmd.Request()
+        self.cli = self.create_client(GripperCmd, 'gripper_cmd')
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Service not available, waiting...')
+        self.req = GripperCmd.Request()
         self.pub_robot_state = self.create_publisher(RobotMoveStatus, "robot_move_status", 10)
         self.pub_detection_state = self.create_publisher(MoveDetectionStatus, "move_detection_status", 10)
 
 
     def send_waypoints(self):
-        squares = ["open", "close_b", "open", "close_p", "open"]
+        squares = ["open"]
         for sqr in squares:
             self.get_logger().info(f'Sending square {sqr}')
             self.req.action =  sqr
@@ -55,6 +55,11 @@ class TestClient(Node):
     def send_move_detection_status(self):
         msg = MoveDetectionStatus()
         msg.legal = True
+        msg.move = "calibrated"
+        self.pub_detection_state.publish(msg)
+        time.sleep(2.0)
+        msg = MoveDetectionStatus()
+        msg.legal = True
         msg.move = "a1a2"
         msg.changed_squares = []
         self.pub_detection_state.publish(msg)
@@ -78,8 +83,9 @@ class TestClient(Node):
 def main(args=None):
     rclpy.init(args=args)
     client = TestClient()
-    client.send_move_detection_status()
-    client.send_robot_status()
+    client.send_waypoints()
+    # client.send_move_detection_status()
+    # client.send_robot_status()
 
     client.destroy_node()
     rclpy.shutdown()
